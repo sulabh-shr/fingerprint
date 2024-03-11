@@ -56,8 +56,8 @@ class MMFVContrastive(Dataset):
                         if mov not in self.movements:  # Only 1 movement
                             continue
                         mov_path = os.path.join(finger_path, mov)
-                        frames1 = [i for i in os.listdir(mov_path) if i.startswith('1_')][::10]
-                        frames2 = [i for i in os.listdir(mov_path) if i.startswith('2_')][::10]
+                        frames1 = [i for i in os.listdir(mov_path) if i.startswith('1_')]
+                        frames2 = [i for i in os.listdir(mov_path) if i.startswith('2_')]
                         all_frames = frames1 + frames2
                         paths = [os.path.join(mov_path, i) for i in all_frames]
                         key = f'{subject}-{finger}'
