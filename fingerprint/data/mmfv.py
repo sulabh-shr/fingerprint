@@ -1,11 +1,12 @@
 import os
-
-import PIL.ImageQt
 import cv2
 import random
 import numpy as np
+import PIL.ImageQt
 from PIL import Image
+from itertools import product
 import matplotlib.pyplot as plt
+from collections import defaultdict
 from torch.utils.data import Dataset
 
 
@@ -24,12 +25,10 @@ class MMFVContrastive(Dataset):
         self.movements = movements
         self.transforms1 = transforms1
         self.transforms2 = transforms2
-        self.data1 = {
-
-        }
-        self.data2 = {
-
-        }
+        self.data1 = defaultdict(dict)  # gallery
+        self.data2 = defaultdict(dict)  # probe
+        self.movement_pairs = tuple(product(movements, movements))  # Track which movement pair to sample
+        self.movement_index = {}
         self.keys = ()
         self._init_paths_and_keys()
 
@@ -49,11 +48,10 @@ class MMFVContrastive(Dataset):
                 sess_path = os.path.join(subject_path, sess)
                 for finger in os.listdir(sess_path):
                     finger_path = os.path.join(sess_path, finger)
-                    # Only 1 finger
                     if finger not in self.fingers:
                         continue
                     for mov in os.listdir(finger_path):
-                        if mov not in self.movements:  # Only 1 movement
+                        if mov not in self.movements:
                             continue
                         mov_path = os.path.join(finger_path, mov)
                         frames1 = [i for i in os.listdir(mov_path) if i.startswith('1_')]
@@ -62,18 +60,28 @@ class MMFVContrastive(Dataset):
                         paths = [os.path.join(mov_path, i) for i in all_frames]
                         key = f'{subject}-{finger}'
                         if sess == '1':
-                            self.data1[key] = self.data1.get(key, []) + paths
+                            self.data1[key][mov] = paths
                         else:
-                            self.data2[key] = self.data2.get(key, []) + paths
+                            self.data2[key][mov] = paths
         self.keys = tuple(self.data1.keys())
+        self.data1 = dict(self.data1)
+        self.data2 = dict(self.data2)
+
+        for key in self.data1:
+            self.movement_index[key] = 0
 
     def __len__(self):
         return len(self.data1)
 
     def __getitem__(self, idx):
         key = self.keys[idx]
-        path1 = random.choice(self.data1[key])
-        path2 = random.choice(self.data2[key])
+        num_mov_pairs = len(self.movement_pairs)
+        previously_sampled = self.movement_index[key] % num_mov_pairs
+        mov_idx = previously_sampled % num_mov_pairs
+        self.movement_index[key] = (previously_sampled + 1) % num_mov_pairs
+        data1_mov, data2_mov = self.movement_pairs[mov_idx]
+        path1 = random.choice(self.data1[key][data1_mov])
+        path2 = random.choice(self.data2[key][data2_mov])
 
         img1 = self._get_image(path1)
         img2 = self._get_image(path2)
@@ -87,7 +95,9 @@ class MMFVContrastive(Dataset):
             'image2': img2,
             'path1': path1,
             'path2': path2,
-            'key': key
+            'key': key,
+            'mov1': data1_mov,
+            'mov2': data2_mov
         }
         return result
 
@@ -104,6 +114,11 @@ class MMFVContrastive(Dataset):
         else:
             cropped_img = Image.fromarray(cropped_img)
         return cropped_img
+
+    def __str__(self):
+        result = (f'MMFV Contrastive\n Root: {self.root}\n Length: {len(self)}\n '
+                  f'Movements: {self.movements}\n Fingers: {self.fingers}')
+        return result
 
 
 def rotate_contour(contour, m):
