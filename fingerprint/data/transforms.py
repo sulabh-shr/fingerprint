@@ -42,7 +42,7 @@ def get_train_transforms(cfg, debug=False):
         transforms.RandomApply(
             [transforms.RandomRotation(degrees=rotate, interpolation=InterpolationMode.BICUBIC)
              ], p=0.5),
-        transforms.RandomResizedCrop((h, w), scale=(0.5, 1.0), ratio=(0.95, 1.10),
+        transforms.RandomResizedCrop((h, w), scale=(0.5, 1.0), ratio=(0.95, 1.05),
                                      interpolation=InterpolationMode.BICUBIC),
         transforms.RandomApply(
             [transforms.ColorJitter(brightness=brightness, contrast=contrast, saturation=saturation, hue=hue)
@@ -57,7 +57,7 @@ def get_train_transforms(cfg, debug=False):
         transforms.RandomApply(
             [transforms.RandomRotation(degrees=rotate, interpolation=InterpolationMode.BICUBIC)
              ], p=0.5),
-        transforms.RandomResizedCrop((h, w), scale=(0.5, 1.0), ratio=(0.85, 1.15),
+        transforms.RandomResizedCrop((h, w), scale=(0.5, 1.0), ratio=(0.95, 1.05),
                                      interpolation=InterpolationMode.BICUBIC),
         transforms.RandomApply(
             [transforms.ColorJitter(brightness=brightness, contrast=contrast, saturation=saturation, hue=hue)
