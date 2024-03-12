@@ -18,3 +18,6 @@ class Contrastive(nn.Module):
             'head': embeddings
         }
         return result
+
+    def forward_backbone(self, x):
+        return self.backbone(x)
