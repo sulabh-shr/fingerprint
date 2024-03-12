@@ -85,8 +85,9 @@ class MMFVContrastive(Dataset):
         result = {
             'image1': img1,
             'image2': img2,
-            'path1': [path1],
-            'path2': [path2]
+            'path1': path1,
+            'path2': path2,
+            'key': key
         }
         return result
 
