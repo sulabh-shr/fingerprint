@@ -36,13 +36,14 @@ def get_train_transforms(cfg, debug=False):
     contrast = cfg.get('contrast', 0.4)
     hue = cfg.get('hue', 0.1)
     saturation = cfg.get('saturation', 0.2)
-    rotate = cfg.get('rotate', 10)
+    rotate = cfg.get('rotate', 5)
 
     first_list = [
         transforms.RandomApply(
             [transforms.RandomRotation(degrees=rotate, interpolation=InterpolationMode.BICUBIC)
              ], p=0.5),
-        transforms.RandomResizedCrop((h, w), scale=(0.5, 1.0), interpolation=InterpolationMode.BICUBIC),
+        transforms.RandomResizedCrop((h, w), scale=(0.5, 1.0), ratio=(0.95, 1.10),
+                                     interpolation=InterpolationMode.BICUBIC),
         transforms.RandomApply(
             [transforms.ColorJitter(brightness=brightness, contrast=contrast, saturation=saturation, hue=hue)
              ], p=0.8),
@@ -56,7 +57,8 @@ def get_train_transforms(cfg, debug=False):
         transforms.RandomApply(
             [transforms.RandomRotation(degrees=rotate, interpolation=InterpolationMode.BICUBIC)
              ], p=0.5),
-        transforms.RandomResizedCrop((h, w), scale=(0.5, 1.0), interpolation=InterpolationMode.BICUBIC),
+        transforms.RandomResizedCrop((h, w), scale=(0.5, 1.0), ratio=(0.85, 1.15),
+                                     interpolation=InterpolationMode.BICUBIC),
         transforms.RandomApply(
             [transforms.ColorJitter(brightness=brightness, contrast=contrast, saturation=saturation, hue=hue)
              ], p=0.8),
