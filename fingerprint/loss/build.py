@@ -1,4 +1,5 @@
 from .vicreg import *
+from .cosine import *
 
 
 def build_loss(cfg):
