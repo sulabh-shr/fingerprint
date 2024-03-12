@@ -1,4 +1,5 @@
 import os
+import sys
 import yaml
 import math
 import torch
@@ -13,6 +14,7 @@ from torch.cuda.amp import GradScaler
 from torch.utils.tensorboard import SummaryWriter
 from torch.nn.parallel import DistributedDataParallel as DDP
 
+sys.path.append('../fingerprint')
 from fingerprint.modelling import build_model
 from fingerprint.data import build_dataset, build_dataloader
 from fingerprint.data.transforms import get_train_transforms, get_test_transforms
