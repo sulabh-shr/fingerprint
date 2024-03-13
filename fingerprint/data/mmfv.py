@@ -88,8 +88,8 @@ class MMFVContrastive(Dataset):
             path2 = random.choice(self.data2[key][data2_mov])
         else:  # Fixed sampling
             data1_mov, data2_mov = self.movement_pairs[0]
-            path1 = self.data1[key][data1_mov]
-            path2 = self.data2[key][data2_mov]
+            path1 = self.data1[key][data1_mov][0]
+            path2 = self.data2[key][data2_mov][0]
 
         img1 = self._get_image(path1)
         img2 = self._get_image(path2)

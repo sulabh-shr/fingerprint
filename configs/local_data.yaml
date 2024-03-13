@@ -1,0 +1,47 @@
+DATA:
+  TEST:
+    DATALOADER:
+      KWARGS:
+        batch_size: 8
+        num_workers: 4
+    DATASET:
+      KWARGS:
+        fingers: &fingers
+        - f1
+        - f2
+        - f3
+        - f4
+        movements: &movements
+        - Roll
+        - Pitch
+        - Yaw
+        root: &root "D:/workspace/datasets/MMFV-25th"
+        mode: "test"
+        subjects: test.txt
+      NAME: MMFVContrastive
+  TRAIN:
+    DATALOADER:
+      KWARGS:
+        batch_size: 16
+        num_workers: 4
+    DATASET:
+      KWARGS:
+        fingers: *fingers
+        movements: *movements
+        root: *root
+        mode: "train"
+        subjects: train.txt
+      NAME: MMFVContrastive
+  VAL:
+    DATALOADER:
+      KWARGS:
+        batch_size: 8
+        num_workers: 4
+    DATASET:
+      KWARGS:
+        fingers: *fingers
+        movements: *movements
+        root: *root
+        mode: "val"
+        subjects: test.txt
+      NAME: MMFVContrastive

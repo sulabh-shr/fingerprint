@@ -1,40 +1,50 @@
 DATA:
-  TRAIN:
-    DATASET:
-      NAME: &data_name "MMFVContrastive"
-      KWARGS:
-        fingers: &fingers ['f1', 'f2', 'f3', 'f4']
-        movements: &movements ['Roll', 'Pitch', 'Yaw']
-        root: &root "D:/workspace/datasets/MMFV-25th"
-        subjects: "train.txt"
-    DATALOADER:
-      KWARGS:
-        batch_size: 4
-        num_workers: &data_workers 4
-  VAL:
-    DATASET:
-      NAME: *data_name
-      KWARGS:
-        fingers: *fingers
-        movements: *movements
-        subjects: "test.txt"
-        root: *root
-    DATALOADER:
-      KWARGS:
-        batch_size: 8
-        num_workers: *data_workers
   TEST:
-    DATASET:
-      NAME: *data_name
-      KWARGS:
-        fingers: *fingers
-        movements: *movements
-        subjects: "test.txt"
-        root: *root
     DATALOADER:
       KWARGS:
         batch_size: 8
-        num_workers: *data_workers
+        num_workers: 4
+    DATASET:
+      KWARGS:
+        fingers: &fingers
+        - f1
+        - f2
+        - f3
+        - f4
+        movements: &movements
+        - Roll
+        - Pitch
+        - Yaw
+        root: &root "D:/workspace/datasets/MMFV-25th"
+        mode: "test"
+        subjects: test.txt
+      NAME: MMFVContrastive
+  TRAIN:
+    DATALOADER:
+      KWARGS:
+        batch_size: 8
+        num_workers: 4
+    DATASET:
+      KWARGS:
+        fingers: *fingers
+        movements: *movements
+        root: *root
+        mode: "train"
+        subjects: train.txt
+      NAME: MMFVContrastive
+  VAL:
+    DATALOADER:
+      KWARGS:
+        batch_size: 8
+        num_workers: 4
+    DATASET:
+      KWARGS:
+        fingers: *fingers
+        movements: *movements
+        root: *root
+        mode: "val"
+        subjects: test.txt
+      NAME: MMFVContrastive
 INPUT:
   IMAGE:
     IMG_SIZE: &img_size [ 384, 384 ]
@@ -57,10 +67,12 @@ MODEL:
       pretrained: True
       num_classes: &dim 256 # feature size
   HEAD:
-    NAME: "Expander"
-    KWARGS:
-      in_channels: *dim
-      out_channels: 8192
+    NAME: "Identity"
+#  HEAD:
+#    NAME: "Expander"
+#    KWARGS:
+#      in_channels: *dim
+#      out_channels: 128
 OPTIM:
   OPTIMIZER:
     NAME: "LARS"
@@ -82,3 +94,4 @@ PARAMS:
   ITERS: 10000
   SAVE_EVERY: 200
   PRINT_EVERY: 1
+  EVAL_EVERY: 200

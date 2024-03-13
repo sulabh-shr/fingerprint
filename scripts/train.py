@@ -7,6 +7,7 @@ import inspect
 import argparse
 import warnings
 from easydict import EasyDict
+import matplotlib.pyplot as plt
 
 from torch import autocast
 import torch.distributed as dist
@@ -21,6 +22,7 @@ from fingerprint.data.transforms import get_train_transforms, get_test_transform
 from fingerprint.trainer import build_optimizer, build_lr_scheduler, resume, load_cfg
 from fingerprint.loss import build_loss
 from fingerprint.utils import Timer, PrintTime, DummyClass, get_run_name
+from fingerprint.evaluation import ContrastiveEvaluator
 
 
 def get_cast_type(x):
@@ -48,11 +50,10 @@ def get_args():
     return args
 
 
-def evaluate(model, dataset, dataloader, loss_fn, rank, device, verbose=False):
+def evaluate(model, evaluator, dataloader, loss_fn, rank, device, verbose=False):
     if dist.is_initialized():
         dist.barrier()
 
-    evaluator = DummyClass()
     loss = torch.Tensor([0.0]).to(device)
     model.eval()
 
@@ -64,17 +65,17 @@ def evaluate(model, dataset, dataloader, loss_fn, rank, device, verbose=False):
         batch_idx = 0
         for d in dataloader:
             batch_idx += 1
-            o = model(d)
-            for idx in range(len(d['image'])):
-                pred_img = o['pred_classes'][idx][0]  # H, W <-- B, 1, H, W
-                gt = d['label'][idx][0]  # H, W <-- B, 1, H, W
-                evaluator.process(pred=pred_img, gt=gt, in_place=True)
-            loss += loss_fn(pred=o['seg_pred_scores'], target=o['seg_gt'])
+            x1 = model(d['image1'].to(device))['head']
+            x2 = model(d['image2'].to(device))['head']
+            loss += loss_fn(x=x1, y=x2)
+            keys = d['key']
+            for idx in range(len(keys)):
+                evaluator.process(x1=x1[idx], x2=x2[idx], key=keys[idx])
             printer.print(f'Evaluation Iter: [{batch_idx}/{len(dataloader)}]')
-            del d
+            del d, x1, x2
     n_loss = len(dataloader)
 
-    warnings.warn(f'Rank {rank}: DATALOADER COMPLETER............................')
+    warnings.warn(f'Rank {rank}: DATALOADER COMPLETED............................')
 
     model.train()
 
@@ -89,11 +90,12 @@ def evaluate(model, dataset, dataloader, loss_fn, rank, device, verbose=False):
     else:
         loss = loss.item()
 
-    conf_matrix = evaluator.conf_matrix
-
-    scores = evaluator.evaluate(conf_matrix)
     loss = loss / n_loss
-    return {'res': scores, 'conf_matrix': conf_matrix, 'loss': loss}
+    scores = evaluator.evaluate()
+    scores['loss'] = loss
+    res = evaluator.summarize(scores)
+    print(res)
+    return scores
 
 
 def main(args):
@@ -142,11 +144,14 @@ def main(args):
     dataset = build_dataset(cfg.DATA.TRAIN)
     dataset.transforms1 = train_transforms['transforms1']
     dataset.transforms2 = train_transforms['transforms2']
+    print(f'Using dataset:\n {dataset}')
 
     # for d in dataset:
     #     fig, ax = plt.subplots(1, 2, figsize=(20, 10))
     #     ax[0].imshow(d['image1'])
     #     ax[1].imshow(d['image2'])
+    #     ax[0].set_title(d['mov1'])
+    #     ax[1].set_title(d['mov2'])
     #     plt.show()
     #     plt.close()
     # raise Exception
@@ -155,7 +160,8 @@ def main(args):
 
     val_transforms = get_test_transforms(cfg.INPUT)
     val_dataset = build_dataset(cfg.DATA.VAL)
-    val_dataset.transforms = val_transforms
+    val_dataset.transforms1 = val_transforms['test']
+    val_dataset.transforms2 = val_transforms['test']
     val_dataloader = build_dataloader(cfg.DATA.VAL, dataset=val_dataset)
 
     # Optimizers and Loss
@@ -208,7 +214,7 @@ def main(args):
     eval_every = cfg.PARAMS.get('EVAL_EVERY', None)
 
     # Train Evaluators
-    evaluator = DummyClass()
+    evaluator = ContrastiveEvaluator()
     # Mixed Precision
     cast_dtype = get_cast_type(cfg.PARAMS.get('PRECISION', None))
     scaler = GradScaler(enabled=cast_dtype is not None)
@@ -223,7 +229,6 @@ def main(args):
     for epoch in range(epoch_start, epochs):
         batch_idx = -1
         epoch_loss = 0
-        evaluator.reset()
         for d in dataloader:
             batch_idx += 1
             global_step += 1
@@ -235,8 +240,6 @@ def main(args):
                 x2 = model(d['image2'].to(device))['head']
                 loss = loss_fn(x=x1, y=x2)
 
-            evaluator.process(x1=x1, x2=x2, in_place=True)
-
             timer('Optim')
             scaler.scale(loss).backward()
             scaler.step(optimizer)
@@ -245,7 +248,7 @@ def main(args):
 
             epoch_loss += loss.item()
             current_lr = optimizer.param_groups[0]['lr']
-            printer.print(f'Epoch: {epoch} | Iter: [{batch_idx}/{len(dataloader)}] | '
+            printer.print(f'Epoch: {epoch} | Iter: [{batch_idx + 1}/{len(dataloader)}] | '
                           f'Loss: {epoch_loss / (batch_idx + 1):.3f} | lr: {current_lr:.8f}')
             writer.add_scalar('train-loss-iter', loss.item(), global_step)
             writer.add_scalar('lr-iter', current_lr, global_step)
@@ -253,6 +256,7 @@ def main(args):
             del d, x1, x2, loss
             timer('Data ')
 
+            # Save checkpoint
             if rank == 0 and (global_step % save_every == 0 or global_step == max_iters - 1):
                 ckpt = {
                     'model': model.state_dict(),
@@ -266,9 +270,10 @@ def main(args):
                 torch.save(ckpt, ckpt_path)
                 print(f'Checkpoint for iter {global_step} saved at: {ckpt_path}')
 
+            # Evaluate model
             if eval_every is not None and (global_step % eval_every == 0 or global_step == max_iters - 1):
-                eval_results = evaluate(model, val_dataset, val_dataloader, loss_fn, rank, device)
-                val_score = eval_results['res']['mIoU']
+                eval_results = evaluate(model, evaluator, val_dataloader, loss_fn, rank, device)
+                val_score = eval_results['AUC']
                 val_loss = eval_results['loss']
                 if val_score > best_score:
                     best_score = val_score
@@ -287,17 +292,12 @@ def main(args):
                         print(f'NEW Best checkpoint saved at: {best_ckpt_path}')
 
                 # Train eval
-                conf_matrix = evaluator.conf_matrix
-                scores = evaluator.evaluate(conf_matrix)
-                train_score = scores['mIoU']
-
-                writer.add_scalar('val-mIoU', val_score, global_step)
+                writer.add_scalar('val-score', val_score, global_step)
                 writer.add_scalar('val-loss', val_loss, global_step)
-                writer.add_scalar('train-mIoU', train_score, global_step)
 
                 if rank == 0:
-                    print(f'EVALUATION RESULTS for step [{global_step}] | train mIoU: {train_score:.2f} | '
-                          f'val mIoU: {val_score:.2f} | val loss: {val_loss:.4f} | '
+                    print(f'EVALUATION RESULTS for step [{global_step}] | '
+                          f'val score: {val_score:.2f} | val loss: {val_loss:.4f} | '
                           f'best mIoU: {best_score:.2f} @ step {best_step}')
 
             if 'metrics' in str(inspect.signature(scheduler.step)):
