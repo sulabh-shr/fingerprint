@@ -313,7 +313,8 @@ def main(args):
         if global_step >= max_iters:
             break
 
-    dist.destroy_process_group()
+    if dist.is_initialized():
+        dist.destroy_process_group()
 
 
 if __name__ == '__main__':
