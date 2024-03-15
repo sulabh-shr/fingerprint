@@ -1,7 +1,7 @@
 import torch
 from torch.utils.data import DataLoader, Dataset
 from torch.utils.data.distributed import DistributedSampler
-from .mmfv import MMFVContrastive
+from .mmfv import MMFVContrastive, MMFVEval
 
 
 def build_dataset(cfg) -> Dataset:
@@ -10,7 +10,7 @@ def build_dataset(cfg) -> Dataset:
     return dataset
 
 
-def build_dataloader(cfg, dataset):
+def build_dataloader(cfg, dataset, **kwargs):
     if torch.distributed.is_initialized():
         shuffle = False
         dataloader = DataLoader(
@@ -20,7 +20,7 @@ def build_dataloader(cfg, dataset):
             **cfg.DATALOADER.KWARGS
         )
     else:
-        dataloader = DataLoader(dataset, **cfg.DATALOADER.KWARGS)
+        dataloader = DataLoader(dataset, **cfg.DATALOADER.KWARGS, **kwargs)
 
     if len(dataloader) == 0:
         raise FileNotFoundError(f'Dataset is empty!')

@@ -3,6 +3,7 @@ import cv2
 import random
 import numpy as np
 import PIL.ImageQt
+import torch
 from PIL import Image
 from itertools import product
 import matplotlib.pyplot as plt
@@ -125,6 +126,128 @@ class MMFVContrastive(Dataset):
 
     def __str__(self):
         result = (f'MMFV Contrastive\n Root: {self.root}\n Length: {len(self)}\n '
+                  f'Movements: {self.movements}\n Fingers: {self.fingers}')
+        return result
+
+
+class MMFVEval(Dataset):
+    def __init__(self,
+                 root,
+                 randomize=True,
+                 transforms1=None,
+                 transforms2=None,
+                 subjects='test.txt',
+                 fingers=('f1', 'f2', 'f3', 'f4'),
+                 gallery_movements=('Roll', 'Pitch', 'Yaw'),
+                 probe_movements=('Pitch',)
+                 ):
+        self.randomize = randomize
+        self.root = root
+        self.subjects = subjects
+        self.fingers = fingers
+        self.gallery_movements = gallery_movements
+        self.probe_movements = probe_movements
+        self.transforms1 = transforms1
+        self.transforms2 = transforms2
+        self.data1 = defaultdict(dict)  # gallery
+        self.data2 = defaultdict(dict)  # probe
+        self.keys = ()
+        self._init_paths_and_keys()
+
+    def _init_paths_and_keys(self):
+        root = self.root
+        subject_file = self.subjects
+
+        with open(os.path.join(root, subject_file)) as f:
+            content = f.readlines()
+            subjects = [i.strip() for i in content]
+
+        for idx, subject in enumerate(os.listdir(root)):
+            if subject not in subjects:
+                continue
+            subject_path = os.path.join(root, subject)
+            for sess in os.listdir(subject_path):
+                sess_path = os.path.join(subject_path, sess)
+                for finger in os.listdir(sess_path):
+                    finger_path = os.path.join(sess_path, finger)
+                    if finger not in self.fingers:
+                        continue
+                    for mov in os.listdir(finger_path):
+                        mov_path = os.path.join(finger_path, mov)
+                        frames1 = [i for i in os.listdir(mov_path) if i.startswith('1_')]
+                        frames2 = [i for i in os.listdir(mov_path) if i.startswith('2_')]
+                        # Sample k frames per video
+                        if self.randomize:
+                            frames1 = random.sample(frames1, k=1)
+                            if len(frames2) > 2:
+                                frames2 = random.sample(frames2, k=1)
+                            all_frames = frames1 + frames2
+                        else:
+                            mid_idx = len(frames1) // 2
+                            frames1 = [frames1[mid_idx]]
+                            if len(frames2) > 2:
+                                mid_idx = len(frames2) // 2
+                                frames2 = [frames2[mid_idx]]
+                            all_frames = frames1 + frames2
+                        paths = [os.path.join(mov_path, i) for i in all_frames]
+                        key = f'{subject}-{finger}'
+                        if sess == '1':
+                            if mov not in self.gallery_movements:
+                                continue
+                            self.data1[key][mov] = paths
+                        else:
+                            if mov not in self.probe_movements:
+                                continue
+                            self.data2[key][mov] = paths
+        self.keys = tuple(self.data1.keys())
+        self.data1 = dict(self.data1)
+        self.data2 = dict(self.data2)
+
+    def __len__(self):
+        return len(self.data1)
+
+    def __getitem__(self, idx):
+        key = self.keys[idx]
+        result = {
+            'gallery': [],
+            'gallery_mov': [],
+            'probe': [],
+            'probe_mov': [],
+            'key': key
+        }
+
+        for data, transforms, gp_key in (
+                (self.data1, self.transforms1, 'gallery'),
+                (self.data2, self.transforms2, 'probe')):
+            for mov, paths in data[key].items():
+                for path in paths:
+                    img = self._get_image(path)
+                    result[gp_key].append(img)
+                    result[f'{gp_key}_mov'].append(mov)
+
+            if transforms is not None:
+                result[gp_key] = [transforms(i) for i in result[gp_key]]
+                if isinstance(result[gp_key][0], torch.Tensor):
+                    result[gp_key] = torch.stack(result[gp_key])
+
+        return result
+
+    @staticmethod
+    def _get_image(path) -> PIL.Image.Image:
+        img = Image.open(path)
+        cropped_img = crop_fingerprint(np.array(img), channels='RGB')
+        h, w, _ = cropped_img.shape
+        # use original image if finger not found
+        if h == 0 or w == 0:
+            print(f'Finger contour not found for image: {path}')
+            crop_fingerprint(np.array(img), channels='RGB', verbose=True, viz=True)
+            cropped_img = img
+        else:
+            cropped_img = Image.fromarray(cropped_img)
+        return cropped_img
+
+    def __str__(self):
+        result = (f'MMFV Eval\n Root: {self.root}\n Length: {len(self)}\n '
                   f'Movements: {self.movements}\n Fingers: {self.fingers}')
         return result
 
