@@ -2,23 +2,25 @@ DATA:
   TEST:
     DATALOADER:
       KWARGS:
-        batch_size: 8
-        num_workers: 4
+        batch_size: 2
+        num_workers: 2
     DATASET:
       KWARGS:
-        fingers: &fingers
-        - f1
-        - f2
-        - f3
-        - f4
-        movements: &movements
-        - Roll
-        - Pitch
-        - Yaw
+        fingers:
+          - f1
+          - f2
+          - f3
+          - f4
+        gallery_movements:
+          - Roll
+          - Pitch
+          - Yaw
+        probe_movements:
+          - Pitch
         root: &root "D:/workspace/datasets/MMFV-25th"
-        mode: "test"
+        segment: &segment true
         subjects: test.txt
-      NAME: MMFVContrastive
+      NAME: MMFVEval
   TRAIN:
     DATALOADER:
       KWARGS:
@@ -26,10 +28,18 @@ DATA:
         num_workers: 4
     DATASET:
       KWARGS:
-        fingers: *fingers
-        movements: *movements
-        root: *root
+        fingers: &fingers
+          - f1
+          - f2
+          - f3
+          - f4
         mode: "train"
+        movements: &movements
+          - Roll
+          - Pitch
+          - Yaw
+        root: *root
+        segment: *segment
         subjects: train.txt
       NAME: MMFVContrastive
   VAL:
@@ -40,15 +50,15 @@ DATA:
     DATASET:
       KWARGS:
         fingers: *fingers
+        mode: "val"
         movements: *movements
         root: *root
-        mode: "val"
+        segment: *segment
         subjects: test.txt
       NAME: MMFVContrastive
 INPUT:
   IMAGE:
     IMG_SIZE: &img_size [ 384, 384 ]
-    TRAIN_MAX_SIZE: [320, 384, 448, 512, 576, 640, 704, 768, 832, 896, 960, 1024, 1088, 1152, 1216, 1280]
     MEAN: [ 0.4850, 0.4560, 0.4060 ]
     STD: [ 0.2290, 0.2240, 0.2250 ]
 LOSS:

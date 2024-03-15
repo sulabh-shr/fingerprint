@@ -18,12 +18,13 @@ DATA:
         probe_movements:
           - Pitch
         root: &root "D:/workspace/datasets/MMFV-25th"
+        segment: &segment true
         subjects: test.txt
       NAME: MMFVEval
   TRAIN:
     DATALOADER:
       KWARGS:
-        batch_size: 16
+        batch_size: 8
         num_workers: 4
     DATASET:
       KWARGS:
@@ -38,6 +39,7 @@ DATA:
           - Yaw
         root: *root
         mode: "train"
+        segment: *segment
         subjects: train.txt
       NAME: MMFVContrastive
   VAL:
@@ -49,7 +51,8 @@ DATA:
       KWARGS:
         fingers: *fingers
         movements: *movements
-        root: *root
         mode: "val"
+        root: *root
+        segment: *segment
         subjects: test.txt
       NAME: MMFVContrastive

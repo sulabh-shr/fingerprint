@@ -14,6 +14,7 @@ from torch.utils.data import Dataset
 class MMFVContrastive(Dataset):
     def __init__(self,
                  root,
+                 segment=True,
                  mode='train',
                  transforms1=None,
                  transforms2=None,
@@ -22,6 +23,7 @@ class MMFVContrastive(Dataset):
                  movements=('Roll', 'Pitch', 'Yaw'),
                  ):
         self.root = root
+        self.segment = segment
         self.mode = mode
         self.subjects = subjects
         self.fingers = fingers
@@ -110,29 +112,27 @@ class MMFVContrastive(Dataset):
         }
         return result
 
-    @staticmethod
-    def _get_image(path) -> PIL.Image.Image:
+    def _get_image(self, path) -> PIL.Image.Image:
         img = Image.open(path)
-        cropped_img = crop_fingerprint(np.array(img), channels='RGB')
+        cropped_img = crop_fingerprint(np.array(img), segment=self.segment, channels='RGB')
         h, w, _ = cropped_img.shape
         # use original image if finger not found
         if h == 0 or w == 0:
             print(f'Finger contour not found for image: {path}')
-            crop_fingerprint(np.array(img), channels='RGB', verbose=True, viz=True)
-            cropped_img = img
-        else:
-            cropped_img = Image.fromarray(cropped_img)
+            return img
+        cropped_img = Image.fromarray(cropped_img)
         return cropped_img
 
     def __str__(self):
         result = (f'MMFV Contrastive\n Root: {self.root}\n Length: {len(self)}\n '
-                  f'Movements: {self.movements}\n Fingers: {self.fingers}')
+                  f'Fingers: {self.fingers}\n Movements: {self.movements}')
         return result
 
 
 class MMFVEval(Dataset):
     def __init__(self,
                  root,
+                 segment=True,
                  randomize=True,
                  transforms1=None,
                  transforms2=None,
@@ -141,8 +141,9 @@ class MMFVEval(Dataset):
                  gallery_movements=('Roll', 'Pitch', 'Yaw'),
                  probe_movements=('Pitch',)
                  ):
-        self.randomize = randomize
         self.root = root
+        self.segment = segment
+        self.randomize = randomize
         self.subjects = subjects
         self.fingers = fingers
         self.gallery_movements = gallery_movements
@@ -232,23 +233,22 @@ class MMFVEval(Dataset):
 
         return result
 
-    @staticmethod
-    def _get_image(path) -> PIL.Image.Image:
+    def _get_image(self, path) -> PIL.Image.Image:
         img = Image.open(path)
-        cropped_img = crop_fingerprint(np.array(img), channels='RGB')
+        cropped_img = crop_fingerprint(np.array(img), segment=self.segment, channels='RGB')
         h, w, _ = cropped_img.shape
         # use original image if finger not found
         if h == 0 or w == 0:
             print(f'Finger contour not found for image: {path}')
-            crop_fingerprint(np.array(img), channels='RGB', verbose=True, viz=True)
-            cropped_img = img
-        else:
-            cropped_img = Image.fromarray(cropped_img)
+            return img
+        cropped_img = Image.fromarray(cropped_img)
         return cropped_img
 
     def __str__(self):
         result = (f'MMFV Eval\n Root: {self.root}\n Length: {len(self)}\n '
-                  f'Movements: {self.movements}\n Fingers: {self.fingers}')
+                  f'Fingers: {self.fingers}\n '
+                  f'Gallery Movements: {self.gallery_movements}\n '
+                  f'Probe Movements: {self.probe_movements}')
         return result
 
 
@@ -260,11 +260,14 @@ def rotate_contour(contour, m):
     return x2, y2
 
 
-def crop_fingerprint(img: np.ndarray, channels='RGB', verbose=False, viz=False):
-    if channels == 'BGR':
+def crop_fingerprint(img: np.ndarray, segment, channels='RGB', verbose=False, viz=False):
+    if channels == 'BGR':  # cv2.imread
         color_mode = cv2.COLOR_BGR2GRAY
-    else:
+    elif channels == 'RGB':  # Image.open
         color_mode = cv2.COLOR_RGB2GRAY
+    else:
+        raise ValueError(f'Invalid channel type: {channels}')
+
     img_gray = cv2.cvtColor(img, color_mode)
 
     # Get largest contour
@@ -277,17 +280,23 @@ def crop_fingerprint(img: np.ndarray, channels='RGB', verbose=False, viz=False):
     if angle > 90:
         angle = -(180 - angle)
 
-    vertical_image, result, rot_contour_x, rot_contour_y = rotate_and_crop_with_contour(
+    # Make none contour pixels zero
+    if segment:
+        contour_mask = np.zeros_like(img_gray)
+        cv2.drawContours(contour_mask, [largest_contour], 0, color=(255, 255, 255), thickness=cv2.FILLED)
+        img[contour_mask == 0, :] = (0, 0, 0)
+
+    vertical_img, cropped_img, rot_contour_x, rot_contour_y = rotate_and_crop_with_contour(
         img, x, y, angle, largest_contour)
 
     # Fit rectangle if ellipse does not work
-    if result.shape[0] == 0 or result.shape[1] == 0:
+    if cropped_img.shape[0] == 0 or cropped_img.shape[1] == 0:
         if verbose:
             print('Using rectangle for contour rotation estimation')
         (x, y), (MA, ma), angle = cv2.minAreaRect(largest_contour)
         if angle > 90:
             angle = -(180 - angle)
-        vertical_image, result, rot_contour_x, rot_contour_y = rotate_and_crop_with_contour(
+        vertical_img, cropped_img, rot_contour_x, rot_contour_y = rotate_and_crop_with_contour(
             img, x, y, angle, largest_contour)
 
     if viz:
@@ -297,22 +306,23 @@ def crop_fingerprint(img: np.ndarray, channels='RGB', verbose=False, viz=False):
         o2 = img.copy()
         cv2.drawContours(o2, [largest_contour], 0, (255, 0, 0), 10)
 
-        o3 = vertical_image.copy()
+        o3 = vertical_img.copy()
         rot_largest_contour = np.zeros_like(largest_contour)
         rot_largest_contour[:, 0, 0] = rot_contour_x
         rot_largest_contour[:, 0, 1] = rot_contour_y
         cv2.drawContours(o3, [rot_largest_contour], 0, (255, 0, 0), 10)
 
         fig, ax = plt.subplots(1, 4, figsize=(20, 10))
-        ax[0].imshow(o1[:, :, ::-1])
-        ax[1].imshow(o2[:, :, ::-1])
-        ax[2].imshow(o3[:, :, ::-1])
-        # ax[3].imshow(result[:, :, ::-1])
+        # Image.open is used to load image so channel inversion not required
+        ax[0].imshow(o1)
+        ax[1].imshow(o2)
+        ax[2].imshow(o3)
+        ax[3].imshow(cropped_img)
 
         plt.show()
         plt.close()
 
-    return result
+    return cropped_img
 
 
 def rotate_and_crop_with_contour(img, x, y, angle, contour):
