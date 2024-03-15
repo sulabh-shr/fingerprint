@@ -45,7 +45,7 @@ class FingerprintEvaluator(object):
                 # if gt == 0 and score > 0.8 or gt == 1 and score < 0.8:
                 #     print(k1, k2, gt, score)
             if self.verbose:
-                print('*'*70)
+                print('*' * 70)
                 indices = np.argsort(k1_scores)[-10:]
                 print(k2)
                 print([k1_list[i] for i in indices[::-1]])
@@ -61,19 +61,22 @@ class FingerprintEvaluator(object):
         # eer_delta = delta[eer_index]
         roc_auc = metrics.auc(fpr, tpr)
 
-        # display = metrics.RocCurveDisplay(fpr=fpr, tpr=tpr, roc_auc=roc_auc)
-        # fig = display.plot()
+        display = metrics.RocCurveDisplay(fpr=fpr, tpr=tpr, roc_auc=roc_auc)
+        display_result = display.plot()
+        fig = display_result.figure_
         # z = np.polyfit(fpr, tpr, deg=2)
         # f = np.poly1d(z)
-        # x = np.linspace(0.05, 0.95, 10)
+        x = np.linspace(0.0, 1.0, 10)
+        y = 1 - x
         # y = f(x)
-        # plt.plot(fpr, tpr, 'o', x, y)
+
+        plt.plot(x, y, '--')
         # plt.savefig('auc-curve.png')
         # plt.show()
 
         result = {'AUC': round(roc_auc, 3), 'EER': round(min(eer_fnr, eer_fpr), 3),
                   'EER threshold': round(eer_threshold, 3)}
-        return result
+        return result, fig
 
     def score_gallery_probe(self, gallery: List[torch.Tensor], probe: List[torch.Tensor]):
         scores = []

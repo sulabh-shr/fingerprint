@@ -7,15 +7,12 @@ from easydict import EasyDict
 
 from torch import autocast
 import torch.distributed as dist
-from torch.cuda.amp import GradScaler
-from torch.utils.tensorboard import SummaryWriter
-from torch.nn.parallel import DistributedDataParallel as DDP
 
 from fingerprint.modelling import build_model
 from fingerprint.data import build_dataset, build_dataloader
 from fingerprint.data.transforms import get_test_transforms
 from fingerprint.trainer import resume, load_cfg
-from fingerprint.utils import Timer, PrintTime, DummyClass, get_run_name
+from fingerprint.utils import Timer, PrintTime, get_run_name
 from fingerprint.evaluation import FingerprintEvaluator
 
 
@@ -34,12 +31,11 @@ def get_args():
     parser.add_argument('--cfg', type=str, nargs='+', help='folder containing images', required=True)
     parser.add_argument('--ckpt', type=str, help='checkpoint file for resuming', default=None)
     parser.add_argument('--out', type=str, help='output folder', required=True)
+    parser.add_argument('--name', type=str, help='output fine name', default=None)
     parser.add_argument('--compile', action='store_true', help='torch.compile flag', default=False)
     parser.add_argument('--ddp', action='store_true', help='use ddp', default=False)
     parser.add_argument('--print-every', type=int, help='print iterations', default=10)
     parser.add_argument('--debug', action='store_true', help='debug', default=False)
-    parser.add_argument('--save', action='store_true', help='save images and results', default=False)
-    parser.add_argument('--viz', action='store_true', help='visualize images and results', default=False)
 
     args = parser.parse_args()
     return args
@@ -72,8 +68,7 @@ def main(args):
     use_ddp = args.ddp
     cfg_org = load_cfg(args.cfg)
     print_every = args.print_every
-    save = args.save
-    viz = args.viz
+    run_name = args.name
 
     # Distributed
     rank = 0
@@ -114,12 +109,6 @@ def main(args):
 
     evaluator = FingerprintEvaluator()
 
-    # Output paths
-    out_img_root = None
-    if save:
-        out_img_root = os.path.join(out_root, 'inference')
-        os.makedirs(out_img_root, exist_ok=True)
-
     # Timers
     print(f'Starting Evaluation')
     printer = PrintTime(end=len(dataloader), print_every=print_every)
@@ -131,14 +120,6 @@ def main(args):
         printer.print(f'Index: {batch_idx}')
 
         timer('Model')
-        # keys = data['key']
-        # for k, v in data.items():
-        #     print(k)
-        #     if isinstance(v[0], torch.Tensor):
-        #         print([i.shape for i in v])
-        #     else:
-        #         print(len(v))
-
         for d in data:
             with torch.no_grad():
                 gallery = model(d['gallery'].to(device))['head']
@@ -146,21 +127,20 @@ def main(args):
                 key = d['key']
             evaluator.process(gallery=gallery, probe=probe, key=key)
 
-    scores = evaluator.evaluate()
+    scores, fig = evaluator.evaluate()
     res = evaluator.summarize(scores)
     print(res)
     print('-' * 70)
-    # out = {
-    #     'per_image_conf': {n: c for n, c in zip(img_names, evaluator.each_conf_matrix)},
-    #     'conf': evaluator.conf_matrix
-    # }
-    # os.makedirs(out_root, exist_ok=True)
-    # final_out_path = os.path.join(out_root, 'eval.pkl')
-    # final_eval_path = os.path.join(out_root, 'eval.txt')
-    # with open(final_out_path, 'wb') as f:
-    #     pickle.dump(out, f)
-    # with open(final_eval_path, 'w') as f:
-    #     f.write(res)
+
+    # Save scores and plots
+    if run_name is None:
+        run_name = get_run_name()
+    os.makedirs(out_root, exist_ok=True)
+    final_eval_path = os.path.join(out_root, f'eval {run_name}.txt')
+    with open(final_eval_path, 'w') as f:
+        f.write(res)
+    final_fig_path = os.path.join(out_root, f'eval {run_name}.png')
+    fig.savefig(final_fig_path)
 
 
 if __name__ == '__main__':

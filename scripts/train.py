@@ -140,21 +140,25 @@ def main(args):
         model = torch.compile(model)
 
     # Dataset
-    train_transforms = get_train_transforms(cfg.INPUT, debug=False)
+    train_transforms = get_train_transforms(cfg.INPUT, debug=debug)
     dataset = build_dataset(cfg.DATA.TRAIN)
     dataset.transforms1 = train_transforms['transforms1']
     dataset.transforms2 = train_transforms['transforms2']
     print(f'Using dataset:\n {dataset}')
 
-    # for d in dataset:
-    #     fig, ax = plt.subplots(1, 2, figsize=(20, 10))
-    #     ax[0].imshow(d['image1'])
-    #     ax[1].imshow(d['image2'])
-    #     ax[0].set_title(d['mov1'])
-    #     ax[1].set_title(d['mov2'])
-    #     plt.show()
-    #     plt.close()
-    # raise Exception
+    if debug:
+        idx = 0
+        for d in dataset:
+            fig, ax = plt.subplots(1, 2, figsize=(20, 10))
+            ax[0].imshow(d['image1'])
+            ax[1].imshow(d['image2'])
+            ax[0].set_title(d['mov1'])
+            ax[1].set_title(d['mov2'])
+            plt.show()
+            plt.close()
+            idx += 1
+            if idx > 5:
+                break
 
     dataloader = build_dataloader(cfg.DATA.TRAIN, dataset=dataset)
 
