@@ -1,7 +1,7 @@
-import matplotlib.pyplot as plt
 import torch
 import numpy as np
 from sklearn import metrics
+import matplotlib.pyplot as plt
 import torch.distributed as dist
 
 
@@ -72,3 +72,5 @@ class ContrastiveEvaluator(object):
         for k, v in res.items():
             out += f'{k[:25]:-<25s} : {v:.3f}\n'
         return out
+
+
