@@ -302,7 +302,7 @@ def main(args):
                 if rank == 0:
                     print(f'EVALUATION RESULTS for step [{global_step}] | '
                           f'val score: {val_score:.2f} | val loss: {val_loss:.4f} | '
-                          f'best mIoU: {best_score:.2f} @ step {best_step}')
+                          f'best score: {best_score:.2f} @ step {best_step}')
 
             if 'metrics' in str(inspect.signature(scheduler.step)):
                 if global_step % eval_every == 0:
