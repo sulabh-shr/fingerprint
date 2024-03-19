@@ -3,10 +3,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.distributed as dist
 
-__all__ = ['VICReg']
+__all__ = ['VICRegLoss']
 
 
-class VICReg(nn.Module):
+class VICRegLoss(nn.Module):
+    NAME = 'VICReg'
+
     def __init__(self, sim_coeff, std_coeff, cov_coeff):
         super().__init__()
         self.sim_coeff = sim_coeff
@@ -42,7 +44,16 @@ class VICReg(nn.Module):
                 + self.cov_coeff * cov_loss
         )
 
-        return loss
+        result = {
+            'loss': loss
+        }
+
+        return result
+
+    def __str__(self):
+        out = (f'{self.NAME} Loss: '
+               f'sim: {self.sim_coeff} | std: {self.std_coeff} | cov: {self.cov_coeff}')
+        return out
 
 
 class FullGatherLayer(torch.autograd.Function):

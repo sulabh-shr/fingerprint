@@ -67,7 +67,7 @@ def evaluate(model, evaluator, dataloader, loss_fn, rank, device, verbose=False)
             batch_idx += 1
             x1 = model(d['image1'].to(device))['head']
             x2 = model(d['image2'].to(device))['head']
-            loss += loss_fn(x=x1, y=x2)
+            loss += loss_fn(x=x1, y=x2)['loss']
             keys = d['key']
             for idx in range(len(keys)):
                 evaluator.process(x1=x1[idx], x2=x2[idx], key=keys[idx])
@@ -170,6 +170,8 @@ def main(args):
 
     # Optimizers and Loss
     loss_fn = build_loss(cfg)
+    print(f'Using Loss:')
+    print(loss_fn)
     optimizer = build_optimizer(cfg, model.parameters())
     scheduler = build_lr_scheduler(cfg, optimizer)
 
@@ -242,7 +244,8 @@ def main(args):
             with autocast(enabled=cast_dtype is not None, dtype=cast_dtype, device_type='cuda'):
                 x1 = model(d['image1'].to(device))['head']
                 x2 = model(d['image2'].to(device))['head']
-                loss = loss_fn(x=x1, y=x2)
+                loss_dict = loss_fn(x=x1, y=x2)
+                loss = loss_dict['loss']
 
             timer('Optim')
             scaler.scale(loss).backward()
@@ -252,10 +255,16 @@ def main(args):
 
             epoch_loss += loss.item()
             current_lr = optimizer.param_groups[0]['lr']
-            printer.print(f'Epoch: {epoch} | Iter: [{batch_idx + 1}/{len(dataloader)}] | '
-                          f'Loss: {epoch_loss / (batch_idx + 1):.3f} | lr: {current_lr:.8f}')
+            print_str = (f'Epoch: {epoch} | Iter: [{batch_idx + 1}/{len(dataloader)}] | '
+                         f'Loss: {epoch_loss / (batch_idx + 1):.3f} | lr: {current_lr:.8f}')
+
             writer.add_scalar('train-loss-iter', loss.item(), global_step)
+            for k, v in loss_dict.items():
+                if k != 'loss':
+                    writer.add_scalar(f'train-{k}-iter', v.item(), global_step)
+                    print_str += f' | {k}: {v.item():.3f}'
             writer.add_scalar('lr-iter', current_lr, global_step)
+            printer.print(print_str)
 
             del d, x1, x2, loss
             timer('Data ')
