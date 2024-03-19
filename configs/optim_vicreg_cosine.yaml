@@ -6,7 +6,10 @@ LOSSES:
       std_coeff: 25.0
       cov_coeff: 1.0
   - NAME: "CrossCosineEmbeddingLoss"
-    WEIGHT: 0.90
+    WEIGHT: 0.5
+    KWARGS:
+      pos_wt: 1.75
+      neg_wt: 0.25
 OPTIM:
   OPTIMIZER:
     NAME: "Adam"
