@@ -1,0 +1,58 @@
+DATA:
+  TEST:
+    DATALOADER:
+      KWARGS:
+        batch_size: 8
+        num_workers: 4
+    DATASET:
+      KWARGS:
+        fingers:
+          - f1
+          - f2
+          - f3
+          - f4
+        gallery_movements:
+          - Roll
+          - Pitch
+          - Yaw
+        probe_movements:
+          - Pitch
+        root: &root "/projects/kosecka/sulabh/datasets/MMFV-25th"
+        segment: &segment true
+        subjects: test.txt
+      NAME: MMFVEval
+  TRAIN:
+    DATALOADER:
+      KWARGS:
+        batch_size: 16
+        num_workers: 4
+    DATASET:
+      KWARGS:
+        fingers: &fingers
+          - f1
+          - f2
+          - f3
+          - f4
+        mode: "train"
+        movements: &movements
+          - Roll
+          - Pitch
+          - Yaw
+        root: *root
+        segment: *segment
+        subjects: train.txt
+      NAME: MMFVContrastive
+  VAL:
+    DATALOADER:
+      KWARGS:
+        batch_size: 8
+        num_workers: 4
+    DATASET:
+      KWARGS:
+        fingers: *fingers
+        mode: "val"
+        movements: *movements
+        root: *root
+        segment: *segment
+        subjects: test.txt
+      NAME: MMFVContrastive
