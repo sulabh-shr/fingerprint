@@ -27,6 +27,8 @@ class CombinedLoss(nn.Module):
 
     def __str__(self):
         out = f'Loss {self.NAME}:\n '
-        for i in self.losses:
-            out += str(i) + '\n '
+        for idx in range(len(self.losses)):
+            weight = self.weights[idx]
+            loss = self.losses[idx]
+            out += f'Weight: {weight} | ' + str(loss) + '\n '
         return out
