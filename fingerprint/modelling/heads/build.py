@@ -1,5 +1,6 @@
 from .expander import *
 from .identity import *
+from .classifier import *
 
 
 def build_head(name, **kwargs):

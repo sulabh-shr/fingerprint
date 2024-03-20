@@ -16,7 +16,14 @@ def build_model(cfg: easydict.EasyDict, device) -> torch.nn.Module:
     head = build_head(head_cfg.NAME, **head_cfg.get('KWARGS', {}))
 
     meta_cfg = cfg.MODEL.META_ARCH
-    model = build_meta_arch(meta_cfg.NAME, backbone=backbone, head=head,
-                            device=device, **meta_cfg.get('KWARGS', {}))
+
+    if 'CLASSIFIER' in cfg.MODEL:
+        classifier_cfg = cfg.MODEL.CLASSIFIER
+        classifier = build_head(classifier_cfg.NAME, **classifier_cfg.get('KWARGS', {}))
+        model = build_meta_arch(meta_cfg.NAME, backbone=backbone, head=head, classifier=classifier,
+                                device=device, **meta_cfg.get('KWARGS', {}))
+    else:
+        model = build_meta_arch(meta_cfg.NAME, backbone=backbone, head=head,
+                                device=device, **meta_cfg.get('KWARGS', {}))
 
     return model
