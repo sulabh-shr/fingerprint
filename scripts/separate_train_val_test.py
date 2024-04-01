@@ -9,8 +9,8 @@ val = 0.0
 test = 0.5
 
 root = r"D:\workspace\datasets\MMFV-25th"
-train_file = 'train.txt'
-test_file = 'test.txt'
+train_file = 'outputs/train.txt'
+test_file = 'outputs/test.txt'
 
 all_subjects = []
 
