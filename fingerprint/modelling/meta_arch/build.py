@@ -1,4 +1,5 @@
 from .contrastive import *
+from .vanilla import *
 
 
 def build_meta_arch(name, **kwargs):
