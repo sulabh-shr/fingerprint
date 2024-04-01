@@ -11,7 +11,7 @@ from typing import List, Dict, Union, Callable
 from collections import defaultdict
 from torch.utils.data import Dataset
 
-from fingerprint.utils import crop_fingerprint
+from fingerprint.utils import crop_fingerprint, equalize_clahe
 
 __all__ = ['MMFVBase', 'MMFVPair', 'MMFVContrastive', 'MMFVSingle']
 
@@ -22,6 +22,7 @@ class MMFVBase(Dataset, abc.ABC):
             self,
             root: str,
             segment: bool,
+            hist: bool,
             randomize: bool,
             subjects: str,
             fingers: List[str],
@@ -59,6 +60,7 @@ class MMFVBase(Dataset, abc.ABC):
         self.mode = mode
         self.root = root
         self.segment = segment
+        self.hist = hist
         self.randomize = randomize
         self.fingers = fingers
         self.gallery_movements = gallery_movements
@@ -128,12 +130,17 @@ class MMFVBase(Dataset, abc.ABC):
 
     def _get_image(self, path) -> PIL.Image.Image:
         img = Image.open(path)
-        cropped_img = crop_fingerprint(np.array(img), segment=self.segment, channels='RGB')
+        img_np = np.array(img)
+        cropped_img = crop_fingerprint(img_np, segment=self.segment, channels='RGB')
         h, w, _ = cropped_img.shape
         # use original image if finger not found
         if h == 0 or w == 0:
             print(f'Finger contour not found for image: {path}')
-            return img
+            cropped_img = img_np
+        # equalize histogram
+        if self.hist:
+            cropped_img = equalize_clahe(cropped_img, channels='RGB')
+        # back to pil image format
         cropped_img = Image.fromarray(cropped_img)
         return cropped_img
 
@@ -158,6 +165,7 @@ class MMFVContrastive(MMFVBase):
                  root,
                  mode=None,
                  segment=True,
+                 hist=True,
                  randomize=True,
                  subjects='train.txt',
                  fingers=('f1', 'f2', 'f3', 'f4'),
@@ -170,6 +178,7 @@ class MMFVContrastive(MMFVBase):
         super().__init__(
             root,
             segment,
+            hist,
             randomize,
             subjects,
             fingers,
@@ -222,6 +231,7 @@ class MMFVPair(MMFVBase):
     def __init__(self,
                  root,
                  segment=True,
+                 hist=True,
                  randomize=True,
                  subjects='train.txt',
                  fingers=('f1', 'f2', 'f3', 'f4'),
@@ -235,6 +245,7 @@ class MMFVPair(MMFVBase):
         super().__init__(
             root,
             segment,
+            hist,
             randomize,
             subjects,
             fingers,
@@ -281,7 +292,8 @@ class MMFVSingle(MMFVBase):
     def __init__(self,
                  root,
                  segment=True,
-                 randomize=True,
+                 hist=True,
+                 randomize=False,
                  subjects='train.txt',
                  fingers=('f1', 'f2', 'f3', 'f4'),
                  gallery_movements=('Roll', 'Pitch', 'Yaw'),
@@ -294,6 +306,7 @@ class MMFVSingle(MMFVBase):
         super().__init__(
             root,
             segment,
+            hist,
             randomize,
             subjects,
             fingers,

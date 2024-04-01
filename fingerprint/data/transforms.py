@@ -48,7 +48,7 @@ def get_train_transforms(cfg, debug=False):
             [transforms.ColorJitter(brightness=brightness, contrast=contrast, saturation=saturation, hue=hue)
              ], p=0.8),
         transforms.RandomGrayscale(p=0.2),
-        GaussianBlur(p=0.8),
+        GaussianBlur(p=0.2),
         transforms.ToTensor(),
         transforms.Normalize(mean, std)
     ]

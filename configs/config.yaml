@@ -4,21 +4,24 @@ DATA:
       KWARGS:
         batch_size: 4
         num_workers: 2
+        shuffle: false
     DATASET:
       KWARGS:
-        fingers:
+        fingers: &fingers
           - f1
           - f2
           - f3
           - f4
         frames_per_video: 2
-        gallery_movements:
+        gallery_movements: &all_movements
           - Roll
           - Pitch
           - Yaw
+        hist: &hist true
         mode: test
         probe_movements:
           - Pitch
+        randomize: false
         root: &root "D:/workspace/datasets/MMFV-25th"
         segment: &segment true
         subjects: test.txt
@@ -28,19 +31,15 @@ DATA:
       KWARGS:
         batch_size: 8
         num_workers: 4
+        shuffle: true
     DATASET:
       KWARGS:
-        fingers: &fingers
-          - f1
-          - f2
-          - f3
-          - f4
-        gallery_movements: &movements
-          - Roll
-          - Pitch
-          - Yaw
+        fingers: *fingers
+        gallery_movements: *all_movements
+        hist: *hist
         mode: train
-        probe_movements: *movements
+        probe_movements: *all_movements
+        randomize: true
         root: *root
         segment: *segment
         subjects: train.txt
@@ -50,17 +49,17 @@ DATA:
       KWARGS:
         batch_size: 4
         num_workers: 2
+        shuffle: false
     DATASET:
       KWARGS:
         fingers: *fingers
         frames_per_video: 2
-        gallery_movements:
-          - Roll
-          - Pitch
-          - Yaw
+        gallery_movements: *all_movements
+        hist: *hist
         mode: val
         probe_movements:
           - Pitch
+        randomize: false
         root: *root
         segment: *segment
         subjects: test.txt
