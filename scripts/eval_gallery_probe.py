@@ -13,7 +13,7 @@ from fingerprint.data import build_dataset, build_dataloader
 from fingerprint.data.transforms import get_test_transforms
 from fingerprint.trainer import resume, load_cfg
 from fingerprint.utils import Timer, PrintTime, get_run_name
-from fingerprint.evaluation import FingerprintEvaluator
+from fingerprint.evaluation import build_evaluator
 
 
 def get_cast_type(x):
@@ -102,12 +102,12 @@ def main(args):
     dataset = build_dataset(cfg.DATA.TEST)
     dataset.transforms1 = test_transforms['test']
     dataset.transforms2 = test_transforms['test']
-    dataloader = build_dataloader(cfg.DATA.TEST, dataset=dataset, collate_fn=collate_as_list_of_dict)
+    dataloader = build_dataloader(cfg.DATA.TEST, dataset=dataset)
 
     # Resume
     resume(path=ckpt_path, rank=rank, ft=True, model=model)
 
-    evaluator = FingerprintEvaluator()
+    evaluator = build_evaluator(cfg.EVALUATOR.TEST)
 
     # Timers
     print(f'Starting Evaluation')
@@ -118,14 +118,10 @@ def main(args):
     for data in dataloader:
         batch_idx += 1
         printer.print(f'Index: {batch_idx}')
-
         timer('Model')
-        for d in data:
-            with torch.no_grad():
-                gallery = model(d['gallery'].to(device))['head']
-                probe = model(d['probe'].to(device))['head']
-                key = d['key']
-            evaluator.process(gallery=gallery, probe=probe, key=key)
+        with torch.no_grad():
+            features = model(data['image'].to(device))['head']
+        evaluator.process(features=features, classes=data['class'], locations=data['location'])
 
     scores, fig = evaluator.evaluate()
     res = evaluator.summarize(scores)

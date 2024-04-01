@@ -22,7 +22,7 @@ from fingerprint.data.transforms import get_train_transforms, get_test_transform
 from fingerprint.trainer import build_optimizer, build_lr_scheduler, resume, load_cfg
 from fingerprint.loss import build_loss
 from fingerprint.utils import Timer, PrintTime, DummyClass, get_run_name
-from fingerprint.evaluation import ContrastiveEvaluator
+from fingerprint.evaluation import build_evaluator
 
 
 def get_cast_type(x):
@@ -61,18 +61,17 @@ def evaluate(model, evaluator, dataloader, loss_fn, rank, device, verbose=False)
     if verbose and rank == 0:
         printer = PrintTime(start=0, end=len(dataloader), print_every=10)
 
+    evaluator.reset()
+    printer.print(f'Starting Evaluation')
     with torch.no_grad():
         batch_idx = 0
-        for d in dataloader:
-            batch_idx += 1
-            x1 = model(d['image1'].to(device))['head']
-            x2 = model(d['image2'].to(device))['head']
-            loss += loss_fn(x=x1, y=x2)['loss']
-            keys = d['key']
-            for idx in range(len(keys)):
-                evaluator.process(x1=x1[idx], x2=x2[idx], key=keys[idx])
+        for data in dataloader:
+            with torch.no_grad():
+                features = model(data['image'].to(device))['head']
+            evaluator.process(features=features, classes=data['class'], locations=data['location'])
             printer.print(f'Evaluation Iter: [{batch_idx}/{len(dataloader)}]')
-            del d, x1, x2
+            del data, features
+    evaluator.reset()
     n_loss = len(dataloader)
 
     warnings.warn(f'Rank {rank}: DATALOADER COMPLETED............................')
@@ -91,7 +90,7 @@ def evaluate(model, evaluator, dataloader, loss_fn, rank, device, verbose=False)
         loss = loss.item()
 
     loss = loss / n_loss
-    scores = evaluator.evaluate()
+    scores, fig = evaluator.evaluate()
     scores['loss'] = loss
     res = evaluator.summarize(scores)
     print(res)
@@ -109,6 +108,8 @@ def main(args):
     use_ddp = not args.skip_ddp
     cfg_org = load_cfg(args.cfg)
 
+    sep_line = '*'*70 + '\n'
+
     # Distributed
     rank = 0
     device = torch.device('cuda')
@@ -122,9 +123,9 @@ def main(args):
     if rank == 0:
         for k, v in args.__dict__.items():
             print(f'{k:-<20s} : {v}')
-        print('*' * 70)
+        print(sep_line)
         print(yaml.dump(cfg_org))
-        print('*' * 70)
+        print(sep_line)
 
     # Load and merge configs
     cfg = EasyDict(cfg_org)
@@ -144,7 +145,8 @@ def main(args):
     dataset = build_dataset(cfg.DATA.TRAIN)
     dataset.transforms1 = train_transforms['transforms1']
     dataset.transforms2 = train_transforms['transforms2']
-    print(f'Using dataset:\n {dataset}')
+    dataloader = build_dataloader(cfg.DATA.TRAIN, dataset=dataset)
+    print(f'{sep_line}Using Train Dataset:\n {dataset}')
 
     if debug:
         idx = 0
@@ -160,17 +162,16 @@ def main(args):
             if idx > 5:
                 break
 
-    dataloader = build_dataloader(cfg.DATA.TRAIN, dataset=dataset)
-
     val_transforms = get_test_transforms(cfg.INPUT)
     val_dataset = build_dataset(cfg.DATA.VAL)
     val_dataset.transforms1 = val_transforms['test']
     val_dataset.transforms2 = val_transforms['test']
     val_dataloader = build_dataloader(cfg.DATA.VAL, dataset=val_dataset)
+    print(f'{sep_line}Using Validation Dataset:\n {dataset}')
 
     # Optimizers and Loss
     loss_fn = build_loss(cfg)
-    print(f'Using Loss:')
+    print(f'{sep_line}Using Loss:')
     print(loss_fn)
     optimizer = build_optimizer(cfg, model.parameters())
     scheduler = build_lr_scheduler(cfg, optimizer)
@@ -192,7 +193,7 @@ def main(args):
     writer = SummaryWriter(out_root) if rank == 0 else DummyClass()
     ckpt_path = os.path.join(out_root, 'checkpoint.pth')
     best_ckpt_path = os.path.join(out_root, 'best-checkpoint.pth')
-    print(f'Checkpoints will be saved at : {ckpt_path}')
+    print(f'{sep_line}Checkpoints will be saved at : {ckpt_path}')
     if rank == 0 and (resume_path is None or ft):
         cfg_path = os.path.join(out_root, 'config.yaml')
         with open(cfg_path, 'w') as f:
@@ -219,8 +220,9 @@ def main(args):
     save_every = cfg.PARAMS.SAVE_EVERY
     eval_every = cfg.PARAMS.get('EVAL_EVERY', None)
 
-    # Train Evaluators
-    evaluator = ContrastiveEvaluator()
+    # Validation Evaluators
+    evaluator = build_evaluator(cfg.EVALUATOR.VAL)
+
     # Mixed Precision
     cast_dtype = get_cast_type(cfg.PARAMS.get('PRECISION', None))
     scaler = GradScaler(enabled=cast_dtype is not None)

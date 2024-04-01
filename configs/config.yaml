@@ -2,7 +2,7 @@ DATA:
   TEST:
     DATALOADER:
       KWARGS:
-        batch_size: 8
+        batch_size: 4
         num_workers: 2
     DATASET:
       KWARGS:
@@ -11,16 +11,18 @@ DATA:
           - f2
           - f3
           - f4
+        frames_per_video: 2
         gallery_movements:
           - Roll
           - Pitch
           - Yaw
+        mode: test
         probe_movements:
           - Pitch
         root: &root "D:/workspace/datasets/MMFV-25th"
         segment: &segment true
         subjects: test.txt
-      NAME: MMFVEval
+      NAME: MMFVSingle
   TRAIN:
     DATALOADER:
       KWARGS:
@@ -33,11 +35,12 @@ DATA:
           - f2
           - f3
           - f4
-        mode: "train"
-        movements: &movements
+        gallery_movements: &movements
           - Roll
           - Pitch
           - Yaw
+        mode: train
+        probe_movements: *movements
         root: *root
         segment: *segment
         subjects: train.txt
@@ -45,17 +48,34 @@ DATA:
   VAL:
     DATALOADER:
       KWARGS:
-        batch_size: 8
-        num_workers: 4
+        batch_size: 4
+        num_workers: 2
     DATASET:
       KWARGS:
         fingers: *fingers
-        mode: "val"
-        movements: *movements
+        frames_per_video: 2
+        gallery_movements:
+          - Roll
+          - Pitch
+          - Yaw
+        mode: val
+        probe_movements:
+          - Pitch
         root: *root
         segment: *segment
         subjects: test.txt
-      NAME: MMFVContrastive
+      NAME: MMFVSingle
+EVALUATOR:
+  TEST:
+    KWARGS:
+      fusion: "feat-avg"
+      verbose: true
+    NAME: FingerprintEvaluator
+  VAL:
+    KWARGS:
+      fusion: "feat-avg"
+      verbose: false
+    NAME: FingerprintEvaluator
 INPUT:
   IMAGE:
     IMG_SIZE: &img_size [ 384, 384 ]

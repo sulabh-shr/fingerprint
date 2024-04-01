@@ -4,22 +4,25 @@ from sklearn import metrics
 import matplotlib.pyplot as plt
 import torch.distributed as dist
 
+from .base import BaseEvaluator
+from .utils import scores_to_metrics
 
-class ContrastiveEvaluator(object):
+__all__ = ['ContrastiveEvaluator', 'ContrastiveEvaluatorMulti']
+
+
+class ContrastiveEvaluator(BaseEvaluator):
     def __init__(self, dim=-1, device='cpu'):
+        super().__init__()
         self.dim = dim
         self.device = device
         self.similarity_fn = torch.nn.CosineSimilarity(dim=dim)
         self.data1 = {}
         self.data2 = {}
-        self._reset()
-
-    def _reset(self):
-        self.data1 = {}
-        self.data2 = {}
+        self.reset()
 
     def reset(self):
-        self._reset()
+        self.data1 = {}
+        self.data2 = {}
 
     def process(self, x1: torch.Tensor, x2: torch.Tensor, key: str):
         self.data1[key] = x1.detach().clone().to(self.device)
@@ -37,30 +40,8 @@ class ContrastiveEvaluator(object):
                 score = self.score(v1, v2)
                 y_true.append(gt)
                 y_score.append(score)
-        fpr, tpr, thresholds = metrics.roc_curve(y_true, y_score)
-        fnr = 1 - tpr
-        delta = np.absolute(fpr - fnr)
-
-        eer_index = np.nanargmin(delta)
-        eer_threshold = thresholds[eer_index]
-        eer_fpr = fpr[eer_index]
-        eer_fnr = fnr[eer_index]
-        # eer_delta = delta[eer_index]
-        roc_auc = metrics.auc(fpr, tpr)
-
-        # display = metrics.RocCurveDisplay(fpr=fpr, tpr=tpr, roc_auc=roc_auc)
-        # fig = display.plot()
-        # z = np.polyfit(fpr, tpr, deg=2)
-        # f = np.poly1d(z)
-        # x = np.linspace(0.05, 0.95, 10)
-        # y = f(x)
-        # plt.plot(fpr, tpr, 'o', x, y)
-        # plt.savefig('auc-curve.png')
-        # plt.show()
-
-        result = {'AUC': round(roc_auc, 3), 'EER': round(min(eer_fnr, eer_fpr), 3),
-                  'EER threshold': round(eer_threshold, 3)}
-        return result
+        result, fig = scores_to_metrics(y_true, y_score)
+        return result, fig
 
     def score(self, x1, x2):
         result = (1 + self.similarity_fn(x1, x2)) / 2
@@ -74,3 +55,62 @@ class ContrastiveEvaluator(object):
         return out
 
 
+class ContrastiveEvaluatorMulti(BaseEvaluator):
+    def __init__(self, dim=-1, device='cpu'):
+        super().__init__()
+        self.dim = dim
+        self.device = device
+        self.similarity_fn = torch.nn.CosineSimilarity(dim=dim)
+        self.data1 = []
+        self.key1 = []
+        self.data2 = []
+        self.key2 = []
+        self.reset()
+
+    def reset(self):
+        self.data1 = []
+        self.key1 = []
+        self.data2 = []
+        self.key2 = []
+
+    def process(self, x1: torch.Tensor = None, x2: torch.Tensor = None,
+                key1: str = None, key2: str = None):
+        assert x1 is not None or x2 is not None
+        if x1 is not None:
+            assert key1 is not None
+            x1 = x1.detach().clone().to(self.device)
+            self.data1.append(x1)
+            self.key1.append(key1)
+        if x2 is not None:
+            assert key2 is not None
+            x2 = x2.detach().clone().to(self.device)
+            self.data2.append(x2)
+            self.key2.append(key2)
+
+    def evaluate(self):
+        y_true = []
+        y_score = []
+        for k1, v1 in zip(self.key1, self.data1):
+            for k2, v2 in zip(self.key2, self.data2):
+                if k1 == k2:
+                    gt = 1
+                else:
+                    gt = 0
+                score = self.score(v1, v2)
+                y_true.append(gt)
+                y_score.append(score)
+
+        result, fig = scores_to_metrics(y_true, y_score)
+
+        return result, fig
+
+    def score(self, x1, x2):
+        result = (1 + self.similarity_fn(x1, x2)) / 2
+        return result
+
+    @staticmethod
+    def summarize(res):
+        out = ""
+        for k, v in res.items():
+            out += f'{k[:25]:-<25s} : {v:.3f}\n'
+        return out
