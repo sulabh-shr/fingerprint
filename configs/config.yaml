@@ -62,7 +62,7 @@ DATA:
         randomize: false
         root: *root
         segment: *segment
-        subjects: test.txt
+        subjects: val.txt
       NAME: MMFVSingle
 EVALUATOR:
   TEST:
