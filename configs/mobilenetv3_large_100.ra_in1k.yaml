@@ -5,11 +5,19 @@ INPUT:
     STD: [ 0.2290, 0.2240, 0.2250 ]
 MODEL:
   META_ARCH:
-    NAME: "Contrastive"
+    NAME: Contrastive
   BACKBONE:
     NAME: "mobilenetv3_large_100.ra_in1k"
     KWARGS:
       pretrained: True
       num_classes: &dim 256 # feature size
   HEAD:
-    NAME: "Identity"
+    NAME: Identity
+  CLASSIFIER:
+    KWARGS:
+      channels:
+      - 512
+      - 64
+      - 8
+      - 1
+    NAME: BinaryClassifier
