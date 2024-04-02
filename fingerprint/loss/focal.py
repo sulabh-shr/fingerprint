@@ -15,7 +15,18 @@ class FocalLoss(nn.Module):
         self.reduction = reduction
         self.loss_fn = sigmoid_focal_loss
 
-    def forward(self, pred: torch.Tensor, gt: torch.Tensor, **kwargs):
+    def forward(self, **kwargs):
+        """
+        Keyword Args:
+            pred (torch.Tensor): predicted logits
+            gt (torch.Tensor): binary gt targets
+        Returns:
+            result (dict): computed loss in key `loss`
+        """
+
+        pred: torch.Tensor = kwargs.get('pred')
+        gt: torch.Tensor = kwargs.get('gt')
+
         if gt.device != pred.device:
             gt = gt.to(pred.device)
         loss = self.loss_fn(pred, gt, alpha=self.alpha, gamma=self.gamma, reduction=self.reduction)
