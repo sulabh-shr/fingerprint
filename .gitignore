@@ -2,7 +2,7 @@
 .idea/
 
 .outputs/
-.scripts/checks/
+.scripts/temp/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
