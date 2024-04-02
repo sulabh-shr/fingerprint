@@ -45,6 +45,10 @@ class FingerprintEvaluator(BaseEvaluator):
             else:
                 raise ValueError(f'Invalid location: {loc}')
 
+    def process_contrastive(self, x1: List[torch.Tensor], x2: List[torch.Tensor], key: List[str]):
+        self.process(x1, key, ['data1'] * len(x1))
+        self.process(x2, key, ['data2'] * len(x1))
+
     def evaluate(self):
         y_true = []
         y_score = []

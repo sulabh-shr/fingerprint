@@ -68,7 +68,7 @@ DATA:
         mode: val
         randomize: false
         subjects: val.txt
-      NAME: MMFVSingle
+      NAME: MMFVContrastive
 EVALUATOR:
   TEST:
     KWARGS:

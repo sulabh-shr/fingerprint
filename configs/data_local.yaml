@@ -68,15 +68,4 @@ DATA:
         mode: val
         randomize: false
         subjects: val.txt
-      NAME: MMFVSingle
-EVALUATOR:
-  TEST:
-    KWARGS:
-      fusion: "feat-avg"
-      verbose: true
-    NAME: FingerprintEvaluator
-  VAL:
-    KWARGS:
-      fusion: "feat-avg"
-      verbose: false
-    NAME: FingerprintEvaluator
+      NAME: MMFVContrastive

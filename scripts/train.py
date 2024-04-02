@@ -65,13 +65,23 @@ def evaluate(model, evaluator, dataloader, loss_fn, rank, device, verbose=False)
     printer.print(f'Starting Evaluation')
     with torch.no_grad():
         batch_idx = 0
-        for data in dataloader:
+        for d in dataloader:
             with torch.no_grad():
-                features = model(data['image'].to(device))['head']
-            evaluator.process(features=features, classes=data['class'], locations=data['location'])
+                x1 = model(d['image1'].to(device))['head']
+                x2 = model(d['image2'].to(device))['head']
+                loss_fn_kwargs = {'x': x1, 'y': x2}
+
+                if model.has_classifier():
+                    output_dict = model.cross_classify(x1, x2)
+                    loss_fn_kwargs['pred'] = output_dict['logits']
+                    loss_fn_kwargs['gt'] = output_dict['gt']
+
+                loss_dict = loss_fn(**loss_fn_kwargs)
+                loss += loss_dict['loss']
+
+            evaluator.process_contrastive(x1=x1, x2=x2, key=d['key'])
             printer.print(f'Evaluation Iter: [{batch_idx}/{len(dataloader)}]')
-            del data, features
-    evaluator.reset()
+            del x1, x2,
     n_loss = len(dataloader)
 
     warnings.warn(f'Rank {rank}: DATALOADER COMPLETED............................')
@@ -94,6 +104,9 @@ def evaluate(model, evaluator, dataloader, loss_fn, rank, device, verbose=False)
     scores['loss'] = loss
     res = evaluator.summarize(scores)
     print(res)
+
+    evaluator.reset()
+
     return scores
 
 
@@ -246,13 +259,14 @@ def main(args):
             with autocast(enabled=cast_dtype is not None, dtype=cast_dtype, device_type='cuda'):
                 x1 = model(d['image1'].to(device))['head']
                 x2 = model(d['image2'].to(device))['head']
-                loss_kwargs = {'x': x1, 'y': x2}
+                loss_fn_kwargs = {'x': x1, 'y': x2}
+
                 if model.has_classifier():
                     output_dict = model.cross_classify(x1, x2)
-                    loss_kwargs['pred'] = output_dict['logits']
-                    loss_kwargs['gt'] = output_dict['gt']
+                    loss_fn_kwargs['pred'] = output_dict['logits']
+                    loss_fn_kwargs['gt'] = output_dict['gt']
 
-                loss_dict = loss_fn(**loss_kwargs)
+                loss_dict = loss_fn(**loss_fn_kwargs)
                 loss = loss_dict['loss']
 
             timer('Optim')

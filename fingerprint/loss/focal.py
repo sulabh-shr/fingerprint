@@ -24,8 +24,11 @@ class FocalLoss(nn.Module):
             result (dict): computed loss in key `loss`
         """
 
-        pred: torch.Tensor = kwargs.get('pred')
-        gt: torch.Tensor = kwargs.get('gt')
+        pred: torch.Tensor = kwargs.get('pred', None)
+        gt: torch.Tensor = kwargs.get('gt', None)
+
+        if pred is None and gt is None:
+            return {'loss': 0}
 
         if gt.device != pred.device:
             gt = gt.to(pred.device)

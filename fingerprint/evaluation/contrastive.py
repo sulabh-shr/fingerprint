@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+from typing import List
 from sklearn import metrics
 import matplotlib.pyplot as plt
 import torch.distributed as dist
@@ -24,9 +25,13 @@ class ContrastiveEvaluator(BaseEvaluator):
         self.data1 = {}
         self.data2 = {}
 
-    def process(self, x1: torch.Tensor, x2: torch.Tensor, key: str):
+    def process_single(self, x1: torch.Tensor, x2: torch.Tensor, key: str):
         self.data1[key] = x1.detach().clone().to(self.device)
         self.data2[key] = x2.detach().clone().to(self.device)
+
+    def process(self, x1: List[torch.Tensor], x2: List[torch.Tensor], key: List[str]):
+        for idx in range(len(key)):
+            self.process_single(x1[idx], x2[idx], key[idx])
 
     def evaluate(self):
         y_true = []
