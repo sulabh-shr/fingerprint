@@ -1,4 +1,5 @@
 DATA:
+  ROOT: &root "D:/workspace/datasets/MMFV-25th"
   TEST:
     DATALOADER:
       KWARGS:
@@ -7,23 +8,24 @@ DATA:
         shuffle: false
     DATASET:
       KWARGS:
+        root: *root
+        crop: &crop true
+        segment: &segment true
+        hist: &hist true
+        frames_per_video: 2
         fingers: &fingers
           - f1
           - f2
           - f3
           - f4
-        frames_per_video: 2
         gallery_movements: &all_movements
           - Roll
           - Pitch
           - Yaw
-        hist: &hist true
-        mode: test
         probe_movements:
           - Pitch
+        mode: test
         randomize: false
-        root: &root "D:/workspace/datasets/MMFV-25th"
-        segment: &segment true
         subjects: test.txt
       NAME: MMFVSingle
   TRAIN:
@@ -34,14 +36,16 @@ DATA:
         shuffle: true
     DATASET:
       KWARGS:
+        root: *root
+        crop: *crop
+        segment: *segment
+        hist: *hist
+        frames_per_video: 2
         fingers: *fingers
         gallery_movements: *all_movements
-        hist: *hist
-        mode: train
         probe_movements: *all_movements
+        mode: train
         randomize: true
-        root: *root
-        segment: *segment
         subjects: train.txt
       NAME: MMFVContrastive
   VAL:
@@ -52,16 +56,17 @@ DATA:
         shuffle: false
     DATASET:
       KWARGS:
-        fingers: *fingers
-        frames_per_video: 2
-        gallery_movements: *all_movements
+        root: *root
+        crop: *crop
+        segment: *segment
         hist: *hist
-        mode: val
+        frames_per_video: 2
+        fingers: *fingers
+        gallery_movements: *all_movements
         probe_movements:
           - Pitch
+        mode: val
         randomize: false
-        root: *root
-        segment: *segment
         subjects: val.txt
       NAME: MMFVSingle
 EVALUATOR:

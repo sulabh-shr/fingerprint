@@ -12,11 +12,11 @@ class CombinedLoss(nn.Module):
         self.losses = losses
         self.weights = weights
 
-    def forward(self, x, y):
+    def forward(self, **kwargs):
         result = {}
         loss = None
         for wt, loss_fn in zip(self.weights, self.losses):
-            loss_i = loss_fn(x, y)['loss']
+            loss_i = loss_fn(**kwargs)['loss']
             if loss is None:
                 loss = wt * loss_i
             else:

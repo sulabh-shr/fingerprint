@@ -1,5 +1,6 @@
 from .vicreg import *
 from .cosine import *
+from .focal import *
 from .combined import CombinedLoss
 
 

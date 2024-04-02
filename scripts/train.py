@@ -108,7 +108,7 @@ def main(args):
     use_ddp = not args.skip_ddp
     cfg_org = load_cfg(args.cfg)
 
-    sep_line = '*'*70 + '\n'
+    sep_line = '*' * 70 + '\n'
 
     # Distributed
     rank = 0
@@ -246,7 +246,13 @@ def main(args):
             with autocast(enabled=cast_dtype is not None, dtype=cast_dtype, device_type='cuda'):
                 x1 = model(d['image1'].to(device))['head']
                 x2 = model(d['image2'].to(device))['head']
-                loss_dict = loss_fn(x=x1, y=x2)
+                loss_kwargs = {'x': x1, 'y': x2}
+                if model.has_classifier():
+                    output_dict = model.cross_classify(x1, x2)
+                    loss_kwargs['pred'] = output_dict['logits']
+                    loss_kwargs['gt'] = output_dict['gt']
+
+                loss_dict = loss_fn(**loss_kwargs)
                 loss = loss_dict['loss']
 
             timer('Optim')

@@ -5,11 +5,12 @@ __all__ = ['Contrastive', 'ContrastiveWithLogits']
 
 
 class Contrastive(nn.Module):
-    def __init__(self, backbone, head, device):
+    def __init__(self, backbone, head, device, classifier=None):
         super().__init__()
         self.backbone = backbone
         self.head = head
         self.device = device
+        self.classifier = classifier
 
     def forward(self, x):
         features = self.backbone(x)
@@ -23,13 +24,13 @@ class Contrastive(nn.Module):
     def forward_backbone(self, x):
         return self.backbone(x)
 
-
-class ContrastiveWithLogits(Contrastive):
-    def __init__(self, backbone, head, classifier, device):
-        super().__init__(backbone=backbone, head=head, device=device)
-        self.classifier = classifier
+    def has_classifier(self):
+        return self.classifier is not None
 
     def cross_classify(self, x1, x2):
+        if not self.has_classifier():
+            raise TypeError(f'Model does not have a classifier.')
+
         n = len(x1)
         output = []
         for i in range(n):
@@ -48,8 +49,14 @@ class ContrastiveWithLogits(Contrastive):
         return result
 
     def classify(self, x1, x2):
+        if not self.has_classifier():
+            raise TypeError(f'Model does not have a classifier.')
         classifier_input = torch.cat((x1, x2), dim=-1)
         result = {
             'logits': self.classifier(classifier_input)  # (n, 1)
         }
         return result
+
+
+# Backward Compatibility
+ContrastiveWithLogits = Contrastive

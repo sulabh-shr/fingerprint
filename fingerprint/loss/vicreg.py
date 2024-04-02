@@ -15,7 +15,7 @@ class VICRegLoss(nn.Module):
         self.std_coeff = std_coeff
         self.cov_coeff = cov_coeff
 
-    def forward(self, x, y):
+    def forward(self, x, y, **kwargs):
         repr_loss = F.mse_loss(x, y)
 
         if dist.is_initialized():

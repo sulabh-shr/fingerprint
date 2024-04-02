@@ -21,6 +21,7 @@ class MMFVBase(Dataset, abc.ABC):
     def __init__(
             self,
             root: str,
+            crop: bool,
             segment: bool,
             hist: bool,
             randomize: bool,
@@ -58,6 +59,7 @@ class MMFVBase(Dataset, abc.ABC):
                 }
         """
         self.mode = mode
+        self.crop = crop
         self.root = root
         self.segment = segment
         self.hist = hist
@@ -131,17 +133,25 @@ class MMFVBase(Dataset, abc.ABC):
     def _get_image(self, path) -> PIL.Image.Image:
         img = Image.open(path)
         img_np = np.array(img)
-        cropped_img = crop_fingerprint(img_np, segment=self.segment, channels='RGB')
-        h, w, _ = cropped_img.shape
-        # use original image if finger not found
-        if h == 0 or w == 0:
-            print(f'Finger contour not found for image: {path}')
-            cropped_img = img_np
+
+        # default is original image if crop not set or not found
+        cropped_img = img_np
+
+        if self.crop:
+            print(f'Cropping: {path}')
+            cropped_img = crop_fingerprint(img_np, segment=self.segment, channels='RGB')
+            h, w, _ = cropped_img.shape
+            if h == 0 or w == 0:
+                print(f'Finger contour not found for image: {path}')
+                cropped_img = img_np
+
         # equalize histogram
         if self.hist:
             cropped_img = equalize_clahe(cropped_img, channels='RGB')
+
         # back to pil image format
         cropped_img = Image.fromarray(cropped_img)
+
         return cropped_img
 
     def __len__(self):
@@ -164,6 +174,7 @@ class MMFVContrastive(MMFVBase):
     def __init__(self,
                  root,
                  mode=None,
+                 crop=True,
                  segment=True,
                  hist=True,
                  randomize=True,
@@ -177,6 +188,7 @@ class MMFVContrastive(MMFVBase):
                  ):
         super().__init__(
             root,
+            crop,
             segment,
             hist,
             randomize,
@@ -230,6 +242,7 @@ class MMFVPair(MMFVBase):
 
     def __init__(self,
                  root,
+                 crop=True,
                  segment=True,
                  hist=True,
                  randomize=True,
@@ -244,6 +257,7 @@ class MMFVPair(MMFVBase):
                  ):
         super().__init__(
             root,
+            crop,
             segment,
             hist,
             randomize,
@@ -291,6 +305,7 @@ class MMFVSingle(MMFVBase):
 
     def __init__(self,
                  root,
+                 crop=False,
                  segment=True,
                  hist=True,
                  randomize=False,
@@ -305,6 +320,7 @@ class MMFVSingle(MMFVBase):
                  ):
         super().__init__(
             root,
+            crop,
             segment,
             hist,
             randomize,

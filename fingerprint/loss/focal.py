@@ -15,10 +15,10 @@ class FocalLoss(nn.Module):
         self.reduction = reduction
         self.loss_fn = sigmoid_focal_loss
 
-    def forward(self, x: torch.Tensor, y: torch.Tensor):
-        if y.device != x.device:
-            y = y.to(x.device)
-        loss = self.loss_fn(x, y, alpha=self.alpha, gamma=self.gamma, reduction=self.reduction)
+    def forward(self, pred: torch.Tensor, gt: torch.Tensor, **kwargs):
+        if gt.device != pred.device:
+            gt = gt.to(pred.device)
+        loss = self.loss_fn(pred, gt, alpha=self.alpha, gamma=self.gamma, reduction=self.reduction)
         result = {
             'loss': loss
         }
@@ -26,6 +26,5 @@ class FocalLoss(nn.Module):
 
     def __str__(self):
         out = (f'{self.NAME} Loss: '
-               f'margin: {self.margin} | reduction: {self.reduction} | '
-               f'pos_wt: {self.pos_wt} | neg_wt: {self.neg_wt}')
+               f'alpha: {self.alpha} | gamma: {self.gamma} | reduction: {self.reduction} | ')
         return out

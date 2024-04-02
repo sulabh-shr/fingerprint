@@ -16,7 +16,7 @@ class CrossCosineEmbeddingLoss(nn.Module):
         self.loss_fn = nn.CosineEmbeddingLoss(margin=margin, reduction='none')
         self._pre_computed_weights = {}
 
-    def forward(self, x, y):
+    def forward(self, x, y, **kwargs):
         n = len(x)
         losses = []
         if n in self._pre_computed_weights:
