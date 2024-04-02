@@ -1,0 +1,23 @@
+INPUT:
+  IMAGE:
+    IMG_SIZE: &img_size [ 224, 224 ]
+    MEAN: [ 0.4850, 0.4560, 0.4060 ]
+    STD: [ 0.2290, 0.2240, 0.2250 ]
+MODEL:
+  META_ARCH:
+    NAME: Contrastive
+  BACKBONE:
+    NAME: "resnet18.gluon_in1k"
+    KWARGS:
+      pretrained: True
+      num_classes: &dim 256 # feature size
+  HEAD:
+    NAME: Identity
+  CLASSIFIER:
+    KWARGS:
+      channels:
+      - 512
+      - 64
+      - 8
+      - 1
+    NAME: BinaryClassifier
