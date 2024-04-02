@@ -19,7 +19,7 @@ sys.path.append('../fingerprint')
 from fingerprint.modelling import build_model
 from fingerprint.data import build_dataset, build_dataloader
 from fingerprint.data.transforms import get_train_transforms, get_test_transforms
-from fingerprint.trainer import build_optimizer, build_lr_scheduler, resume, load_cfg
+from fingerprint.trainer import build_optimizer, build_lr_scheduler, resume, load_cfg, merge_from_list
 from fingerprint.loss import build_loss
 from fingerprint.utils import Timer, PrintTime, DummyClass, get_run_name
 from fingerprint.evaluation import build_evaluator
@@ -46,6 +46,7 @@ def get_args():
     parser.add_argument('--compile', action='store_true', help='torch.compile flag', default=False)
     parser.add_argument('--skip-ddp', action='store_true', help='skip ddp', default=False)
     parser.add_argument('--debug', action='store_true', help='debug', default=False)
+    parser.add_argument('--opts', type=str, nargs='*', help='cfg updates', default=None)
     args = parser.parse_args()
     return args
 
@@ -119,7 +120,10 @@ def main(args):
     ft = args.ft
     compile_ = args.compile
     use_ddp = not args.skip_ddp
-    cfg_org = load_cfg(args.cfg)
+    opts = args.opts
+
+    # Load and merge configs
+    cfg_org = load_cfg(args.cfg, opts)
 
     sep_line = '*' * 70 + '\n'
 
@@ -140,7 +144,7 @@ def main(args):
         print(yaml.dump(cfg_org))
         print(sep_line)
 
-    # Load and merge configs
+    # EasyDict conversion for easier access
     cfg = EasyDict(cfg_org)
 
     # Model

@@ -36,6 +36,7 @@ def get_args():
     parser.add_argument('--ddp', action='store_true', help='use ddp', default=False)
     parser.add_argument('--print-every', type=int, help='print iterations', default=10)
     parser.add_argument('--debug', action='store_true', help='debug', default=False)
+    parser.add_argument('--opts', type=str, nargs='*', help='cfg updates', default=None)
 
     args = parser.parse_args()
     return args
@@ -66,9 +67,12 @@ def main(args):
     ckpt_path = args.ckpt
     compile_ = args.compile
     use_ddp = args.ddp
-    cfg_org = load_cfg(args.cfg)
     print_every = args.print_every
     run_name = args.name
+    opts = args.opts
+
+    # Load and merge configs
+    cfg_org = load_cfg(args.cfg, opts)
 
     # Distributed
     rank = 0
