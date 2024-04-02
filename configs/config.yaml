@@ -25,7 +25,7 @@ DATA:
         probe_movements:
           - Pitch
         mode: test
-        randomize: false
+        randomize: true
         subjects: test.txt
       NAME: MMFVSingle
   TRAIN:
@@ -64,7 +64,7 @@ DATA:
         fingers: *fingers
         gallery_movements: *all_movements
         probe_movements:
-          - Pitch
+          - Roll
         mode: val
         randomize: false
         subjects: val.txt
