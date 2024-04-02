@@ -1,23 +1,31 @@
 import os
 import shutil
 
-
 root = r"D:/workspace/datasets/MMFV-Dataset"
 nth = 10
 start_idx = 0
-out_folder = f"MMFV-{nth}th-start_{start_idx}"
+if start_idx == 0:
+    out_folder = f"MMFV-{nth}th"
+else:
+    out_folder = f"MMFV-{nth}th-start_{start_idx}"
 out_root = r"D:/workspace/datasets/" + out_folder
 
-for idx, subject in enumerate(sorted(os.listdir(root))):
+subjects = sorted(os.listdir(root))
+
+for idx, subject in enumerate(subjects):
     print(f'[{idx}] | subject: {subject}')
+
     subject_path = os.path.join(root, subject)
-    
+    if not os.path.isdir(subject_path):
+        print(f'Skip: {subject_path}')
+        continue
+
     for sess in os.listdir(subject_path):
         sess_path = os.path.join(subject_path, sess)
-    
+
         for finger in os.listdir(sess_path):
             finger_path = os.path.join(sess_path, finger)
-    
+
             for mov in os.listdir(finger_path):
                 mov_path = os.path.join(finger_path, mov)
                 frames_vid1 = [i for i in os.listdir(mov_path) if i.startswith('1_')]
@@ -29,7 +37,7 @@ for idx, subject in enumerate(sorted(os.listdir(root))):
 
                 # Select every nth frame
                 selected_frames = frames_vid1[start_idx::nth] + frames_vid2[start_idx::nth]
-                
+
                 # Copy
                 for frame in selected_frames:
                     in_path = os.path.join(mov_path, frame)
