@@ -142,6 +142,8 @@ def main(args):
     final_fig_path = os.path.join(out_root, f'eval {run_name}.png')
     fig.savefig(final_fig_path)
 
+    print(f'Eval Outputs saved at: {final_eval_path}')
+
 
 if __name__ == '__main__':
     _args = get_args()
