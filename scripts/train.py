@@ -167,7 +167,7 @@ def main(args):
     val_dataset.transforms1 = val_transforms['test']
     val_dataset.transforms2 = val_transforms['test']
     val_dataloader = build_dataloader(cfg.DATA.VAL, dataset=val_dataset)
-    print(f'{sep_line}Using Validation Dataset:\n {dataset}')
+    print(f'{sep_line}Using Validation Dataset:\n {val_dataset}')
 
     # Optimizers and Loss
     loss_fn = build_loss(cfg)
