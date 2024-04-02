@@ -1,45 +1,51 @@
 DATA:
+  ROOT: &root "/projects/kosecka/sulabh/datasets/MMFV-25th"
   TEST:
     DATALOADER:
       KWARGS:
         batch_size: 8
         num_workers: 4
+        shuffle: false
     DATASET:
       KWARGS:
-        fingers:
-          - f1
-          - f2
-          - f3
-          - f4
-        gallery_movements:
-          - Roll
-          - Pitch
-          - Yaw
-        probe_movements:
-          - Pitch
-        root: &root "/projects/kosecka/sulabh/datasets/MMFV-25th"
+        root: *root
+        crop: &crop true
         segment: &segment true
-        subjects: test.txt
-      NAME: MMFVEval
-  TRAIN:
-    DATALOADER:
-      KWARGS:
-        batch_size: 16
-        num_workers: 4
-    DATASET:
-      KWARGS:
+        hist: &hist true
+        frames_per_video: 2
         fingers: &fingers
           - f1
           - f2
           - f3
           - f4
-        mode: "train"
-        movements: &movements
+        gallery_movements: &all_movements
           - Roll
           - Pitch
           - Yaw
+        probe_movements:
+          - Pitch
+        mode: test
+        randomize: false
+        subjects: test.txt
+      NAME: MMFVSingle
+  TRAIN:
+    DATALOADER:
+      KWARGS:
+        batch_size: 16
+        num_workers: 4
+        shuffle: true
+    DATASET:
+      KWARGS:
         root: *root
+        crop: *crop
         segment: *segment
+        hist: *hist
+        frames_per_video: 2
+        fingers: *fingers
+        gallery_movements: *all_movements
+        probe_movements: *all_movements
+        mode: train
+        randomize: true
         subjects: train.txt
       NAME: MMFVContrastive
   VAL:
@@ -47,12 +53,19 @@ DATA:
       KWARGS:
         batch_size: 8
         num_workers: 4
+        shuffle: false
     DATASET:
       KWARGS:
-        fingers: *fingers
-        mode: "val"
-        movements: *movements
         root: *root
+        crop: *crop
         segment: *segment
-        subjects: test.txt
+        hist: *hist
+        frames_per_video: 2
+        fingers: *fingers
+        gallery_movements: *all_movements
+        probe_movements:
+          - Pitch
+        mode: val
+        randomize: false
+        subjects: val.txt
       NAME: MMFVContrastive
