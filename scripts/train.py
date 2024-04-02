@@ -244,9 +244,10 @@ def main(args):
     printer = PrintTime(start=global_step, end=max_iters, print_every=print_every) if rank == 0 else DummyClass()
     timer = Timer('Data ', debug=debug) if rank == 0 else DummyClass()
 
-    val_loss = float('inf')
     best_score = 0
+    best_loss = val_loss = float('inf')
     best_step = 0
+
     for epoch in range(epoch_start, epochs):
         batch_idx = -1
         epoch_loss = 0
@@ -310,8 +311,9 @@ def main(args):
                 eval_results = evaluate(model, evaluator, val_dataloader, loss_fn, rank, device)
                 val_score = eval_results['AUC']
                 val_loss = eval_results['loss']
-                if val_score > best_score:
+                if val_loss < best_loss:
                     best_score = val_score
+                    best_loss = val_loss
                     best_step = global_step
                     if rank == 0:
                         ckpt = {
@@ -333,7 +335,7 @@ def main(args):
                 if rank == 0:
                     print(f'EVALUATION RESULTS for step [{global_step}] | '
                           f'val score: {val_score:.2f} | val loss: {val_loss:.4f} | '
-                          f'best score: {best_score:.2f} @ step {best_step}')
+                          f'best loss: {best_loss:.2f} & score: {best_score:.2f} @ step {best_step}')
 
             if 'metrics' in str(inspect.signature(scheduler.step)):
                 if global_step % eval_every == 0:
