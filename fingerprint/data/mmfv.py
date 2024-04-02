@@ -138,7 +138,6 @@ class MMFVBase(Dataset, abc.ABC):
         cropped_img = img_np
 
         if self.crop:
-            print(f'Cropping: {path}')
             cropped_img = crop_fingerprint(img_np, segment=self.segment, channels='RGB')
             h, w, _ = cropped_img.shape
             if h == 0 or w == 0:
@@ -159,7 +158,7 @@ class MMFVBase(Dataset, abc.ABC):
 
     def __str__(self):
         result = (f'{self.__class__.__name__}\n Root: {self.root}\n Length: {len(self)}\n '
-                  f'Segment: {self.segment}\n Randomize: {self.randomize}\n '
+                  f'Crop: {self.crop}\n Segment: {self.segment}\n Randomize: {self.randomize}\n '
                   f'Fingers: {self.fingers}\n Gallery Movements: {self.gallery_movements}\n '
                   f'Probe Movements: {self.probe_movements}\n Frames per Video: {self.frames_per_video}')
         return result
