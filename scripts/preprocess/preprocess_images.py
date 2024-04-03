@@ -1,6 +1,7 @@
 import os
 import cv2
 import argparse
+import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -14,6 +15,8 @@ def get_args():
     parser.add_argument('--binarize', action='store_true', help='photo to fingerprint', default=False)
     parser.add_argument('--ext', type=str, help='output extension', default='.jpg')
     parser.add_argument('--overwrite', action='store_true', help='overwrite existing out files', default=False)
+    parser.add_argument('--start', type=int, help='subject start index', default=0)
+    parser.add_argument('--end', type=int, help='subject end index', default=float('int'))
     args = parser.parse_args()
     return args
 
@@ -26,8 +29,21 @@ def main(args):
     binarize = args.binarize
     out_ext = args.ext
     overwrite = args.overwrite
+    start = args.start
+    end = args.end
+
+    subject_count = 0
+    prev_subject = None
 
     for d in iterate_mmfv_files(root, out_root=out_root):
+        subject = d['subject']
+        if prev_subject != subject:
+            prev_subject = subject
+            subject_count += 1
+
+        if not (start <= subject_count < end):
+            continue
+
         in_path = d['img_path']
         out_dir = d['out_dir']
         frame, _ = os.path.splitext(d['frame'])
@@ -40,7 +56,8 @@ def main(args):
             print(f'File exists: {out_path}')
             continue
 
-        print(out_path)
+        t = datetime.datetime.now().strftime("%d-%m-%Y: %H:%M:%S")
+        print(f'{t} | {subject} | {out_path}')
         img = cv2.imread(in_path)
 
         cropped_img = img
