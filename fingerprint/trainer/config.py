@@ -1,6 +1,4 @@
-import ast
 import yaml
-import easydict
 
 
 def load_cfg(cfgs, opts=None):
@@ -33,8 +31,10 @@ def merge_from_list(cfg, opts):
         elif value in ('None', 'none'):
             value = None
         elif isinstance(prev_value, (tuple, list)):
-            value = f'\'{value}\''  # string representation of list
-            value = ast.literal_eval(value)
+            # value = {value}\''  # string representation of list
+            value = convert_str_to_list(value)
+            element_type = type(prev_value[0])
+            value = [element_type(i) for i in value]
 
         set_nested(cfg, parameter, value)
 
@@ -54,3 +54,15 @@ def set_nested(d, key, value):
         d = d[k]
     d[keys[-1]] = value
     return d
+
+
+def convert_str_to_list(list_as_string: str):
+    list_as_string = list_as_string.strip()
+    list_as_string = list_as_string.strip('[]()')
+
+    result = []
+
+    for i in list_as_string.split(','):
+        i = i.strip()
+        result.append(i)
+    return result
