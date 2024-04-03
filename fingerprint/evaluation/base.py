@@ -14,6 +14,10 @@ class BaseEvaluator(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def set_model(self, model):
+        pass
+
+    @abc.abstractmethod
     def process(self, *args, **kwargs):
         pass
 
@@ -21,4 +25,6 @@ class BaseEvaluator(abc.ABC):
     @abc.abstractmethod
     def summarize(self) -> str:
         pass
+
+
 

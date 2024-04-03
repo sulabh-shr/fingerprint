@@ -112,6 +112,7 @@ def main(args):
     resume(path=ckpt_path, rank=rank, ft=True, model=model)
 
     evaluator = build_evaluator(cfg.EVALUATOR.TEST)
+    evaluator.set_model(model)
 
     # Timers
     print(f'Starting Evaluation')

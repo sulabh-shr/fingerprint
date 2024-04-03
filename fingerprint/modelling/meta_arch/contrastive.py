@@ -48,10 +48,15 @@ class Contrastive(nn.Module):
         }
         return result
 
-    def classify(self, x1, x2):
+    def classify(self, x1: torch.Tensor, x2: torch.Tensor):
         if not self.has_classifier():
             raise TypeError(f'Model does not have a classifier.')
-        classifier_input = torch.cat((x1, x2), dim=-1)
+
+        if x1.ndim == 1:
+            x1 = x1.unsqueeze(0)
+            x2 = x2.unsqueeze(0)
+
+        classifier_input = torch.cat((x1, x2), dim=-1)  # (n, 2d) <- (n, d) + (n, d)
         result = {
             'logits': self.classifier(classifier_input)  # (n, 1)
         }

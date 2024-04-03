@@ -1,9 +1,11 @@
 import torch
+import warnings
 import numpy as np
-from typing import List, Union, Dict
+import torch.nn as nn
 import torch.nn.functional as F
 import torch.distributed as dist
 from collections import defaultdict
+from typing import List, Union, Dict
 from sklearn.decomposition import PCA
 
 from .base import BaseEvaluator
@@ -13,7 +15,16 @@ __all__ = ['FingerprintEvaluator', 'FingerprintEvaluatorWithLogits']
 
 
 class FingerprintEvaluator(BaseEvaluator):
-    def __init__(self, dim=-1, fusion='score-avg', gallery_id='data1', probe_id='data2', device='cpu', verbose=True):
+    def __init__(
+            self,
+            dim=-1,
+            fusion='score-avg',
+            gallery_id='data1',
+            probe_id='data2',
+            device='cpu',
+            model=None,
+            verbose=True
+    ):
         super().__init__()
         self.FUSIONS = ('score-avg', 'feat-avg', 'cat-replicate', 'cat-pca')
         self.dim = dim
@@ -23,7 +34,9 @@ class FingerprintEvaluator(BaseEvaluator):
         self.gallery_id = gallery_id
         self.probe_id = probe_id
         self.device = device
+        self.model = model
         self.verbose = verbose
+
         self.similarity_fn = torch.nn.CosineSimilarity(dim=dim)
         self.gallery: Dict[str, Union[torch.Tensor, List[torch.Tensor]]] = defaultdict(list)
         self.probe: Dict[str, Union[torch.Tensor, List[torch.Tensor]]] = defaultdict(list)
@@ -151,18 +164,41 @@ class FingerprintEvaluator(BaseEvaluator):
             out += f'{k[:25]:-<25s} : {v:.3f}\n'
         return out
 
+    def set_model(self, model):
+        warnings.warn(f'Features will not be re-used by model')
+
 
 class FingerprintEvaluatorWithLogits(FingerprintEvaluator):
-    def __init__(self, model, dim=-1, store_device='cpu', compute_device='cuda', verbose=True):
-        super().__init__(dim=dim, device=store_device, verbose=verbose)
-        self.model = model
-        self.model.eval()
-        self.model.to(compute_device)
-        self.compute_device = compute_device
+    def __init__(
+            self,
+            dim=-1,
+            fusion='score-avg',
+            gallery_id='data1',
+            probe_id='data2',
+            device='cpu',
+            model: nn.Module = None,
+            verbose=True,
+            model_device='cuda'
+    ):
+        super().__init__(
+            dim,
+            fusion,
+            gallery_id,
+            probe_id,
+            device,
+            model,
+            verbose
+        )
+        self.model_device = model_device
 
     def score(self, x1: torch.Tensor, x2: torch.Tensor):
         with torch.no_grad():
-            x1 = x1.unsqueeze(0).to(self.compute_device)
-            x2 = x2.unsqueeze(0).to(self.compute_device)
+            x1 = x1.to(self.model_device)
+            x2 = x2.to(self.model_device)
             result = F.sigmoid(self.model.classify(x1, x2)['logits'])
         return result.item()
+
+    def set_model(self, model):
+        model.eval()
+        model.to(self.model_device)
+        self.model = model

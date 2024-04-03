@@ -19,6 +19,8 @@ def scores_to_metrics(y_true: List, y_score: List):
     eer_delta = delta[eer_index]
     roc_auc = metrics.auc(fpr, tpr)
 
+    ap = metrics.average_precision_score(y_true, y_score)
+
     y_pred_label = np.zeros_like(y_true)
     y_pred_label[y_score > eer_threshold] = 1
     accuracy = metrics.accuracy_score(y_true, y_pred_label)
@@ -52,11 +54,11 @@ def scores_to_metrics(y_true: List, y_score: List):
         'f1': round(f1_score * 100, 3),
         'Precision': round(precision * 100, 3),
         'Recall': round(recall * 100, 3),
+        'Avg Precision': round(ap * 100, 3),
         'Accuracy': round(accuracy * 100, 3),
         'P': P,
         'N': N,
         'PP': PP,
         'PN': PN,
-
     }
     return result, fig
