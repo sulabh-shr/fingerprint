@@ -17,7 +17,12 @@ def get_args():
     parser.add_argument('--overwrite', action='store_true', help='overwrite existing out files', default=False)
     parser.add_argument('--start', type=int, help='subject start index', default=0)
     parser.add_argument('--end', type=int, help='subject end index', default=float('int'))
+
     args = parser.parse_args()
+
+    for k, v in args.__dict__.items():
+        print(f'{k:-<20s} : {v}')
+
     return args
 
 
@@ -31,6 +36,7 @@ def main(args):
     overwrite = args.overwrite
     start = args.start
     end = args.end
+    flush = True
 
     subject_count = 0
     prev_subject = None
@@ -57,7 +63,7 @@ def main(args):
             continue
 
         t = datetime.datetime.now().strftime("%d-%m-%Y: %H:%M:%S")
-        print(f'{t} | {subject} | {out_path}')
+        print(f'{t} | {subject} | {out_path}', flush=flush)
         img = cv2.imread(in_path)
 
         cropped_img = img
@@ -91,7 +97,7 @@ def main(args):
                 # Fingerprint Enhancement
                 img_out = image_enhancer.enhance(gray)
             except (IndexError, ValueError) as e:
-                print(f'Error for file: {in_path}')
+                print(f'Error for file: {in_path}', flush=flush)
                 # fig, ax = plt.subplots(1, 3, figsize=(20, 8))
                 # ax[0].imshow(img[:, :, ::-1])
                 # ax[1].imshow(cropped_img[:, :, ::-1])
