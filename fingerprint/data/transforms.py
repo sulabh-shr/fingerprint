@@ -1,6 +1,6 @@
 import numpy as np
 from PIL import ImageOps, ImageFilter
-import torchvision.transforms as transforms
+import torchvision.transforms as tr
 from torchvision.transforms import InterpolationMode
 
 
@@ -31,43 +31,35 @@ def get_train_transforms(cfg, debug=False):
     h, w = cfg.IMAGE.IMG_SIZE
     mean = cfg.IMAGE.MEAN
     std = cfg.IMAGE.STD
+    binary = cfg.IMAGE.get('BINARY', False)
 
-    brightness = cfg.get('brightness', 0.4)
-    contrast = cfg.get('contrast', 0.4)
+    br = cfg.get('brightness', 0.4)
+    cont = cfg.get('contrast', 0.4)
     hue = cfg.get('hue', 0.1)
-    saturation = cfg.get('saturation', 0.2)
+    sat = cfg.get('saturation', 0.2)
     rotate = cfg.get('rotate', 5)
 
-    first_list = [
-        transforms.RandomApply(
-            [transforms.RandomRotation(degrees=rotate, interpolation=InterpolationMode.BICUBIC)
-             ], p=0.5),
-        transforms.RandomResizedCrop((h, w), scale=(0.5, 1.0), ratio=(0.95, 1.05),
-                                     interpolation=InterpolationMode.BICUBIC),
-        transforms.RandomApply(
-            [transforms.ColorJitter(brightness=brightness, contrast=contrast, saturation=saturation, hue=hue)
-             ], p=0.8),
-        transforms.RandomGrayscale(p=0.2),
-        GaussianBlur(p=0.2),
-        transforms.ToTensor(),
-        transforms.Normalize(mean, std)
+    spaces = [
+        tr.RandomApply([tr.RandomRotation(degrees=rotate, interpolation=InterpolationMode.BICUBIC)], p=0.5),
+        tr.RandomResizedCrop((h, w), scale=(0.5, 1.0), ratio=(0.95, 1.05), interpolation=InterpolationMode.BICUBIC),
+    ]
+    colors = [
+        tr.RandomApply([tr.ColorJitter(brightness=br, contrast=cont, saturation=sat, hue=hue)], p=0.8),
+        tr.RandomGrayscale(p=0.2),
+    ]
+    pixels = [GaussianBlur(p=0.2)]
+    finals = [
+        tr.ToTensor(),
+        tr.Normalize(mean, std)
     ]
 
-    second_list = [
-        transforms.RandomApply(
-            [transforms.RandomRotation(degrees=rotate, interpolation=InterpolationMode.BICUBIC)
-             ], p=0.5),
-        transforms.RandomResizedCrop((h, w), scale=(0.5, 1.0), ratio=(0.95, 1.05),
-                                     interpolation=InterpolationMode.BICUBIC),
-        transforms.RandomApply(
-            [transforms.ColorJitter(brightness=brightness, contrast=contrast, saturation=saturation, hue=hue)
-             ], p=0.8),
-        transforms.RandomGrayscale(p=0.2),
-        GaussianBlur(p=0.1),
-        Solarization(p=0.2),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=mean, std=std),
-    ]
+    second_only = [Solarization(p=0.2)]
+    if binary:
+        colors = []
+        second_only = []
+
+    first_list = spaces + colors + pixels + finals
+    second_list = spaces + colors + pixels + second_only + finals
 
     # Skip Tensor and Normalization for viewing
     if debug:
@@ -75,8 +67,8 @@ def get_train_transforms(cfg, debug=False):
         second_list = second_list[:-2]
 
     result = {
-        'transforms1': transforms.Compose(first_list),
-        'transforms2': transforms.Compose(second_list)
+        'transforms1': tr.Compose(first_list),
+        'transforms2': tr.Compose(second_list)
     }
     return result
 
@@ -87,16 +79,16 @@ def get_test_transforms(cfg, debug=False):
     std = cfg.IMAGE.STD
 
     transforms_list = [
-        transforms.Resize(size=max(h, w), interpolation=InterpolationMode.BICUBIC),
-        transforms.CenterCrop(size=(h, w)),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=mean, std=std)
+        tr.Resize(size=max(h, w), interpolation=InterpolationMode.BICUBIC),
+        tr.CenterCrop(size=(h, w)),
+        tr.ToTensor(),
+        tr.Normalize(mean=mean, std=std)
     ]
 
     if debug:
         transforms_list = transforms_list[:-2]
 
     result = {
-        'test': transforms.Compose(transforms_list)
+        'test': tr.Compose(transforms_list)
     }
     return result
