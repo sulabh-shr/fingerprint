@@ -16,12 +16,15 @@ def get_args():
     parser.add_argument('--ext', type=str, help='output extension', default='.jpg')
     parser.add_argument('--overwrite', action='store_true', help='overwrite existing out files', default=False)
     parser.add_argument('--start', type=int, help='subject start index', default=0)
-    parser.add_argument('--end', type=int, help='subject end index', default=float('int'))
+    parser.add_argument('--end', type=int, help='subject end index', default=None)
 
     args = parser.parse_args()
 
     for k, v in args.__dict__.items():
         print(f'{k:-<20s} : {v}')
+
+    if args.end is None:
+        args.end = float('inf')
 
     return args
 
@@ -111,6 +114,9 @@ def main(args):
 
 
 if __name__ == '__main__':
+    import sys
+    sys.path.append('../fingerprint')
+    
     from fingerprint.utils import crop_fingerprint, equalize_clahe
     from fingerprint.utils import iterate_mmfv_files
 
