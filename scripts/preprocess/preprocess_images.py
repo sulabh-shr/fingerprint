@@ -70,53 +70,46 @@ def main(args):
         img = cv2.imread(in_path)
 
         cropped_img = img
-        if crop:
-            try:
+
+        try:
+            if crop:
                 cropped_img = crop_fingerprint(img, segment=True, channels='BGR', viz=False)
-            except Exception as e:
-                print(f'Error for file: {in_path}')
-                print(str(e))
-                continue
 
-        enhanced_img = cropped_img
-        if hist:
-            enhanced_img = equalize_clahe(cropped_img, channels='BGR')
+            enhanced_img = cropped_img
+            if hist:
+                enhanced_img = equalize_clahe(cropped_img, channels='BGR')
 
-        img_out_uint8 = enhanced_img
-        if binarize:
-            img_gray = cv2.cvtColor(enhanced_img, cv2.COLOR_BGR2GRAY)
+            img_out_uint8 = enhanced_img
+            if binarize:
+                img_gray = cv2.cvtColor(enhanced_img, cv2.COLOR_BGR2GRAY)
 
-            # Contrast stretching:
-            # https://stackoverflow.com/questions/72004972/extract-ridges-and-valleys-from-finger-image
-            k = 5
-            se = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,
-                                           (k, k))  # larger than the width of the widest ridges
-            o = cv2.morphologyEx(img_gray, cv2.MORPH_OPEN, se)  # locally lowest grayvalue
-            c = cv2.morphologyEx(img_gray, cv2.MORPH_CLOSE, se)  # locally highest grayvalue
-            gray = (img_gray - o) / (c - o + 1e-6)
+                # Contrast stretching:
+                # https://stackoverflow.com/questions/72004972/extract-ridges-and-valleys-from-finger-image
+                k = 5  # larger than the width of the widest ridges
+                se = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k, k))
+                o = cv2.morphologyEx(img_gray, cv2.MORPH_OPEN, se)  # locally lowest grayvalue
+                c = cv2.morphologyEx(img_gray, cv2.MORPH_CLOSE, se)  # locally highest grayvalue
+                gray = (img_gray - o) / (c - o + 1e-6)
 
-            image_enhancer = FingerprintImageEnhancer()
-            try:
                 # Fingerprint Enhancement
+                image_enhancer = FingerprintImageEnhancer()
                 img_out = image_enhancer.enhance(gray)
-            except (IndexError, ValueError) as e:
-                print(f'Error for file: {in_path}', flush=flush)
-                # fig, ax = plt.subplots(1, 3, figsize=(20, 8))
-                # ax[0].imshow(img[:, :, ::-1])
-                # ax[1].imshow(cropped_img[:, :, ::-1])
-                # ax[2].imshow(gray, cmap='gray')
-                # plt.show()
-                continue
-            img_out_uint8 = img_out.astype(np.uint8) * 255
+                img_out_uint8 = img_out.astype(np.uint8) * 255
 
-        if img_out_uint8.shape[0] > 0 and img_out_uint8.shape[1] > 0:
-            cv2.imwrite(out_path, img_out_uint8)
+            if img_out_uint8.shape[0] > 0 and img_out_uint8.shape[1] > 0:
+                cv2.imwrite(out_path, img_out_uint8)
+
+        except Exception as e:
+            print(f'Error for file: {in_path}', flush=flush)
+            print(str(e))
+            continue
 
 
 if __name__ == '__main__':
     import sys
+
     sys.path.append('../fingerprint')
-    
+
     from fingerprint.utils import crop_fingerprint, equalize_clahe
     from fingerprint.utils import iterate_mmfv_files
 
