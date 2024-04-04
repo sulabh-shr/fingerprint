@@ -85,6 +85,10 @@ class MMFVBase(Dataset, abc.ABC):
     def _init_paths_and_keys(self):
         root = self.root
         subjects = self.subjects
+
+        num_data1_paths = []
+        num_data2_paths = []
+
         for idx, subject in enumerate(natsorted(os.listdir(root))):
             if subjects is not None and subject not in subjects:
                 continue
@@ -108,8 +112,14 @@ class MMFVBase(Dataset, abc.ABC):
                         key = f'{subject}-{finger}'
                         if sess == '1' and mov in self.gallery_movements:
                             self.data1[key][mov] = paths
+                            num_data1_paths.append(len(paths))
                         elif sess == '2' and mov in self.probe_movements:
                             self.data2[key][mov] = paths
+                            num_data2_paths.append(len(paths))
+
+        print(f'Average paths per class in DATA1: {np.mean(num_data1_paths):.1f}')
+        print(f'Average paths per class in DATA2: {np.mean(num_data2_paths):.1f}')
+
         self.keys = tuple(self.data1.keys())
         self.data1 = dict(self.data1)
         self.data2 = dict(self.data2)

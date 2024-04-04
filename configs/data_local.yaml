@@ -13,15 +13,8 @@ DATA:
         segment: &segment true
         hist: &hist true
         frames_per_video: 2
-        fingers: &fingers
-          - f1
-          - f2
-          - f3
-          - f4
-        gallery_movements: &all_movements
-          - Roll
-          - Pitch
-          - Yaw
+        fingers: &fingers [f1, f2, f3, f4]
+        gallery_movements: &all_movements [Roll, Pitch, Yaw]
         probe_movements:
           - Pitch
         mode: test
@@ -40,7 +33,7 @@ DATA:
         crop: *crop
         segment: *segment
         hist: *hist
-        frames_per_video: 2
+        frames_per_video: null
         fingers: *fingers
         gallery_movements: *all_movements
         probe_movements: *all_movements
