@@ -209,7 +209,8 @@ def main(args):
     # Checkpoints and summaries
     writer = SummaryWriter(out_root) if rank == 0 else DummyClass()
     ckpt_path = os.path.join(out_root, 'checkpoint.pth')
-    best_ckpt_path = os.path.join(out_root, 'best-checkpoint.pth')
+    best_score_path = os.path.join(out_root, 'checkpoint-best-loss.pth')
+    best_loss_path = os.path.join(out_root, 'checkpoint-best-score.pth')
     print(f'{sep_line}Checkpoints will be saved at : {ckpt_path}')
     if rank == 0 and (resume_path is None or ft):
         cfg_path = os.path.join(out_root, 'config.yaml')
@@ -250,7 +251,7 @@ def main(args):
 
     best_score = 0
     best_loss = val_loss = float('inf')
-    best_step = 0
+    best_loss_step = best_score_step = 0
 
     for epoch in range(epoch_start, epochs):
         batch_idx = -1
@@ -315,31 +316,37 @@ def main(args):
                 eval_results = evaluate(model, evaluator, val_dataloader, loss_fn, rank, device)
                 val_score = eval_results['AUC']
                 val_loss = eval_results['loss']
-                if val_loss < best_loss:
-                    best_score = val_score
-                    best_loss = val_loss
-                    best_step = global_step
-                    if rank == 0:
-                        ckpt = {
-                            'model': model.state_dict(),
-                            'optim': optimizer.state_dict(),
-                            'lr_scheduler': scheduler.state_dict(),
-                            'epoch': epoch,
-                            'global_step': global_step,
-                            'epochs': epochs,
-                            'max_iters': max_iters
-                        }
-                        torch.save(ckpt, best_ckpt_path)
-                        print(f'NEW Best checkpoint saved at: {best_ckpt_path}')
-
-                # Train eval
                 writer.add_scalar('val-score', val_score, global_step)
                 writer.add_scalar('val-loss', val_loss, global_step)
-
                 if rank == 0:
+                    ckpt = {
+                        'model': model.state_dict(),
+                        'optim': optimizer.state_dict(),
+                        'lr_scheduler': scheduler.state_dict(),
+                        'epoch': epoch,
+                        'global_step': global_step,
+                        'epochs': epochs,
+                        'max_iters': max_iters
+                    }
+                    torch.save(ckpt, ckpt_path)
+
+                    if val_score >= best_score:
+                        best_score = val_score
+                        best_score_step = global_step
+                        torch.save(ckpt, best_score_path)
+                        print(f'NEW Best score checkpoint saved at: {best_score_path}')
+                        writer.add_scalar('val-score-best', val_score, global_step)
+                    if val_loss <= best_loss:
+                        best_loss = val_loss
+                        best_loss_step = global_step
+                        torch.save(ckpt, best_loss_path)
+                        print(f'NEW Best loss checkpoint saved at: {best_loss_path}')
+                        writer.add_scalar('val-loss-best', val_loss, global_step)
+
                     print(f'EVALUATION RESULTS for step [{global_step}] | '
-                          f'val score: {val_score:.2f} | val loss: {val_loss:.4f} | '
-                          f'best loss: {best_loss:.2f} & score: {best_score:.2f} @ step {best_step}')
+                          f'val score: {val_score:.2f} | val loss: {val_loss:.4f} | ')
+                    print(f'Best Loss  @ step [ {best_loss_step:>5d} ] : {best_loss:.2f} ')
+                    print(f'Best Score @ step [ {best_score_step:>5d} ] : {best_score:.2f} ')
 
             if 'metrics' in str(inspect.signature(scheduler.step)):
                 if global_step % eval_every == 0:
