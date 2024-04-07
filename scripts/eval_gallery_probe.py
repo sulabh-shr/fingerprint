@@ -15,6 +15,14 @@ from fingerprint.trainer import resume, load_cfg
 from fingerprint.utils import Timer, PrintTime, get_run_name
 from fingerprint.evaluation import build_evaluator
 
+import matplotlib
+
+matplotlib.rc('font', family='sans-serif')
+matplotlib.rc('font', serif='Arial')
+matplotlib.rc('text', usetex='false')
+matplotlib.rcParams.update({'font.size': 14})
+matplotlib.rcParams['lines.linewidth'] = 2
+
 
 def get_cast_type(x):
     if x is None:
@@ -37,6 +45,7 @@ def get_args():
     parser.add_argument('--print-every', type=int, help='print iterations', default=10)
     parser.add_argument('--debug', action='store_true', help='debug', default=False)
     parser.add_argument('--opts', type=str, nargs='*', help='cfg updates', default=None)
+    parser.add_argument('--fig-title', type=str, help='figure title', default=None)
 
     args = parser.parse_args()
     return args
@@ -70,6 +79,7 @@ def main(args):
     print_every = args.print_every
     run_name = args.name
     opts = args.opts
+    fig_title = args.fig_title
 
     # Load and merge configs
     cfg_org = load_cfg(args.cfg, opts)
@@ -129,6 +139,10 @@ def main(args):
         evaluator.process(features=features, classes=data['class'], locations=data['location'])
 
     scores, fig = evaluator.evaluate()
+
+    if fig_title:
+        plt.title(fig_title)
+
     res = evaluator.summarize(scores)
     print(res)
     print('-' * 70)
@@ -141,7 +155,7 @@ def main(args):
     with open(final_eval_path, 'w') as f:
         f.write(res)
     final_fig_path = os.path.join(out_root, f'eval {run_name}.png')
-    fig.savefig(final_fig_path)
+    fig.savefig(final_fig_path, bbox_inches='tight')
 
     print(f'Eval Outputs saved at: {final_eval_path}')
 

@@ -34,7 +34,8 @@ def scores_to_metrics(y_true: List, y_score: List):
     PN = len(y_true) - PP
 
     display = metrics.RocCurveDisplay(fpr=fpr, tpr=tpr, roc_auc=roc_auc)
-    display_result = display.plot()
+    # display = metrics.RocCurveDisplay.from_predictions(y_true=y_true, y_pred=y_score)
+    display_result = display.plot(color='green', marker='x', markersize=6, alpha=0.5)
     fig = display_result.figure_
     # z = np.polyfit(fpr, tpr, deg=2)
     # f = np.poly1d(z)
@@ -42,7 +43,19 @@ def scores_to_metrics(y_true: List, y_score: List):
     y = 1 - x
     # y = f(x)
 
-    plt.plot(x, y, '--')
+    plt.plot(x, y, '--', color='orange', alpha=0.5, label='FPR = FNR')
+    plt.xlim((0., 1.))
+    plt.ylim((0., 1.))
+    plt.xlabel('FPR')
+    plt.ylabel('TPR = (1 - FNR)')
+
+    plt_score = min(eer_fnr, eer_fpr)
+    plt_score_name = 'EER'
+    plt.scatter([plt_score], [1 - plt_score],
+                s=200, marker='X', label=f'{plt_score_name} = {round(plt_score * 100, 2)}',
+                c='red', alpha=1)
+    plt.legend(loc='upper right', bbox_to_anchor=(0.95, 0.95))
+
     # plt.savefig('auc-curve.png')
     # plt.show()
 
