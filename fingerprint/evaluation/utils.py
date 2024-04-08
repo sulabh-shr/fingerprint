@@ -43,11 +43,11 @@ def scores_to_metrics(y_true: List, y_score: List):
     y = 1 - x
     # y = f(x)
 
-    plt.plot(x, y, '--', color='orange', alpha=0.5, label='FPR = FNR')
+    plt.plot(x, y, '--', color='orange', alpha=0.5)
     plt.xlim((0., 1.))
     plt.ylim((0., 1.))
-    plt.xlabel('FPR')
-    plt.ylabel('TPR = (1 - FNR)')
+    plt.xlabel('False Match Rate (FMR)')
+    plt.ylabel('Genuine Accept Rate (1 - FNMR)')
 
     plt_score = min(eer_fnr, eer_fpr)
     plt_score_name = 'EER'

@@ -1,7 +1,9 @@
 import os
 import yaml
 import torch
+import random
 import argparse
+import numpy as np
 import matplotlib.pyplot as plt
 from easydict import EasyDict
 
@@ -46,6 +48,7 @@ def get_args():
     parser.add_argument('--debug', action='store_true', help='debug', default=False)
     parser.add_argument('--opts', type=str, nargs='*', help='cfg updates', default=None)
     parser.add_argument('--fig-title', type=str, help='figure title', default=None)
+    parser.add_argument('--seed', type=int, help='randomness seed', default=None)
 
     args = parser.parse_args()
     return args
@@ -80,6 +83,13 @@ def main(args):
     run_name = args.name
     opts = args.opts
     fig_title = args.fig_title
+    seed = args.seed
+
+    if seed is not None:
+        torch.manual_seed(seed)
+        torch.cuda.manual_seed(seed)
+        random.seed(seed)
+        np.random.seed(seed)
 
     # Load and merge configs
     cfg_org = load_cfg(args.cfg, opts)
