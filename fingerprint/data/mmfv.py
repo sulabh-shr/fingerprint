@@ -13,7 +13,7 @@ from torch.utils.data import Dataset
 
 from fingerprint.utils import crop_fingerprint, equalize_clahe
 
-__all__ = ['MMFVBase', 'MMFVPair', 'MMFVContrastive', 'MMFVSingle']
+__all__ = ['MMFVBase', 'MMFVPair', 'MMFVContrastive', 'MMFVSingle', 'MMFVContrastiveAllPairs']
 
 
 class MMFVBase(Dataset, abc.ABC):
@@ -382,6 +382,95 @@ class MMFVSingle(MMFVBase):
             result[k] = v
         result['image'] = img
 
+        return result
+
+
+class MMFVContrastiveClass(MMFVBase):
+    """
+        Single pair of images per iteration.
+        All possible movement pairs are included in one batch.
+    """
+
+    def __init__(self,
+                 root,
+                 mode=None,
+                 crop=True,
+                 segment=True,
+                 hist=True,
+                 randomize=True,
+                 subjects='train.txt',
+                 fingers=('f1', 'f2', 'f3', 'f4'),
+                 gallery_movements=('Roll', 'Pitch', 'Yaw'),
+                 probe_movements=('Roll', 'Pitch', 'Yaw'),
+                 frames_per_video=None,
+                 transforms1=None,
+                 transforms2=None,
+                 ):
+        super().__init__(
+            root,
+            crop,
+            segment,
+            hist,
+            randomize,
+            subjects,
+            fingers,
+            gallery_movements,
+            probe_movements,
+            frames_per_video,
+            transforms1,
+            transforms2,
+            mode
+        )
+        self._create_pairs_data()
+
+    def _create_pairs_data(self):
+        mov_pairs = tuple(product(self.gallery_movements, self.probe_movements))
+        data = {}
+        count = 0
+        for label, key in enumerate(self.keys):
+            for data1_mov, data2_mov in mov_pairs:
+                data[count] = {
+                    'key': key,
+                    'mov1': data1_mov,
+                    'mov2': data2_mov,
+                    'label': label,
+                }
+                count += 1
+        self.data = data
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        data = self.data[idx]
+        key, label = data['key'], data['label']
+        data1_mov, data2_mov = data['mov1'], data['mov2']
+        path1 = random.choice(self.data1[key][data1_mov])
+        path2 = random.choice(self.data2[key][data2_mov])
+        img1 = self._get_image(path1)
+        img2 = self._get_image(path2)
+        if self.transforms1 is not None:
+            img1 = self.transforms1(img1)
+        if self.transforms2 is not None:
+            img2 = self.transforms2(img2)
+
+        result = {
+            'image1': img1,
+            'image2': img2,
+            'path1': path1,
+            'path2': path2,
+            'key': key,
+            'mov1': data1_mov,
+            'mov2': data2_mov,
+            'label': label
+        }
+        return result
+
+    def __str__(self):
+        result = (f'{self.__class__.__name__}\n Root: {self.root}\n Length: {len(self)}\n '
+                  f'Crop: {self.crop}\n Segment: {self.segment}\n Randomize: {self.randomize}\n '
+                  f'Fingers: {self.fingers}\n Gallery Movements: {self.gallery_movements}\n '
+                  f'Probe Movements: {self.probe_movements}\n Frames per Video: {self.frames_per_video}')
         return result
 
 

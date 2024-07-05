@@ -1,7 +1,7 @@
 import torch
 from torch.utils.data import DataLoader, Dataset
 from torch.utils.data.distributed import DistributedSampler
-from .mmfv import MMFVBase, MMFVPair, MMFVContrastive, MMFVSingle
+from .mmfv import MMFVBase, MMFVPair, MMFVContrastive, MMFVSingle, MMFVContrastiveAllPairs
 
 
 def build_dataset(cfg) -> Dataset:
