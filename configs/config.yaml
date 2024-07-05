@@ -116,6 +116,11 @@ MODEL:
         - 8
         - 1
     NAME: BinaryClassifier
+  EXPANDER:
+    KWARGS:
+      in_channels: 256
+      out_channels: 1024
+    NAME: "Expander"
 OPTIM:
   OPTIMIZER:
     NAME: "LARS"

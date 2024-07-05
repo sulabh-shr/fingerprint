@@ -68,16 +68,27 @@ def evaluate(model, evaluator, dataloader, loss_fn, rank, device, verbose=False)
         batch_idx = 0
         for d in dataloader:
             with torch.no_grad():
-                x1 = model(d['image1'].to(device))['head']
-                x2 = model(d['image2'].to(device))['head']
-                loss_fn_kwargs = {'x': x1, 'y': x2}
-
+                out1 = model(d['image1'].to(device))
+                out2 = model(d['image2'].to(device))
+                loss_fn_kwargs = {
+                    'x': out1['head'],
+                    'y': out2['head'],
+                    'z1': out1.get('expander', out1['head']),
+                    'z2': out2.get('expander', out2['head']),
+                    'label': d['label'].to(device) if 'label' in d else None
+                }
+                x1, x2 = loss_fn_kwargs['x'], loss_fn_kwargs['y']
                 if model.has_classifier():
-                    output_dict = model.cross_classify(x1, x2)
-                    loss_fn_kwargs['pred'] = output_dict['logits']
-                    loss_fn_kwargs['gt'] = output_dict['gt']
+                    cls_out_dict = model.cross_classify(
+                        loss_fn_kwargs['x'],
+                        loss_fn_kwargs['y'],
+                        label=loss_fn_kwargs['label']
+                    )
+                    loss_fn_kwargs['pred'] = cls_out_dict['logits']
+                    loss_fn_kwargs['gt'] = cls_out_dict['gt']
 
                 loss_dict = loss_fn(**loss_fn_kwargs)
+                loss = loss_dict['loss']
                 loss += loss_dict['loss']
 
             evaluator.process_contrastive(x1=x1, x2=x2, key=d['key'])
@@ -263,18 +274,24 @@ def main(args):
             timer('Model')
             optimizer.zero_grad()
             with autocast(enabled=cast_dtype is not None, dtype=cast_dtype, device_type='cuda'):
-                x1 = model(d['image1'].to(device))['head']
-                x2 = model(d['image2'].to(device))['head']
-                loss_fn_kwargs = {'x': x1, 'y': x2}
-
-                # Add Identity Labels
-                if 'label' in d:
-                    loss_fn_kwargs['label'] = d['label'].to(device)
-
+                out1 = model(d['image1'].to(device))
+                out2 = model(d['image2'].to(device))
+                loss_fn_kwargs = {
+                    'x': out1['head'],
+                    'y': out2['head'],
+                    'z1': out1.get('expander', out1['head']),
+                    'z2': out2.get('expander', out2['head']),
+                    'label': d['label'].to(device) if 'label' in d else None
+                }
+                x1, x2 = loss_fn_kwargs['x'], loss_fn_kwargs['y']
                 if model.has_classifier():
-                    output_dict = model.cross_classify(x1, x2)
-                    loss_fn_kwargs['pred'] = output_dict['logits']
-                    loss_fn_kwargs['gt'] = output_dict['gt']
+                    cls_out_dict = model.cross_classify(
+                        loss_fn_kwargs['x'],
+                        loss_fn_kwargs['y'],
+                        label=loss_fn_kwargs['label']
+                    )
+                    loss_fn_kwargs['pred'] = cls_out_dict['logits']
+                    loss_fn_kwargs['gt'] = cls_out_dict['gt']
 
                 loss_dict = loss_fn(**loss_fn_kwargs)
                 loss = loss_dict['loss']

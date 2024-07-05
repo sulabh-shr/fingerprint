@@ -34,12 +34,12 @@ class VICRegLoss(nn.Module):
         self.std_coeff = std_coeff
         self.cov_coeff = cov_coeff
 
-    def forward(self, x, y, label=None, eps=0.0001, **kwargs):
+    def forward(self, z1, z2, label=None, eps=0.0001, **kwargs):
         """
 
         Args:
-            x: tensor of shape (B, D)
-            y: tensor of shape (B, D)
+            z1: tensor of shape (B, D)
+            z2: tensor of shape (B, D)
             label: label for x and y that denotes class/identity
             eps: small number added to variance
             **kwargs:
@@ -47,9 +47,10 @@ class VICRegLoss(nn.Module):
         Returns:
 
         """
+        x, y = z1, z2
         if dist.is_initialized():
-            x = torch.cat(FullGatherLayer.apply(x), dim=0)
-            y = torch.cat(FullGatherLayer.apply(y), dim=0)
+            x = torch.cat(FullGatherLayer.apply(z1), dim=0)
+            y = torch.cat(FullGatherLayer.apply(z2), dim=0)
 
         batch_size = x.shape[0]
         num_features = x.shape[-1]
