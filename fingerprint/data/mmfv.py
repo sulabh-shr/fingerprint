@@ -13,7 +13,7 @@ from torch.utils.data import Dataset
 
 from fingerprint.utils import crop_fingerprint, equalize_clahe
 
-__all__ = ['MMFVBase', 'MMFVPair', 'MMFVContrastive', 'MMFVSingle', 'MMFVContrastiveAllPairs']
+__all__ = ['MMFVBase', 'MMFVPair', 'MMFVContrastive', 'MMFVSingle', 'MMFVContrastiveClass']
 
 
 class MMFVBase(Dataset, abc.ABC):
