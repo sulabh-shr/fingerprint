@@ -1,8 +1,8 @@
 # Pycharm
 .idea/
 
-.outputs/
-.scripts/temp/
+outputs/
+scripts/temp/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
