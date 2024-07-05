@@ -267,6 +267,10 @@ def main(args):
                 x2 = model(d['image2'].to(device))['head']
                 loss_fn_kwargs = {'x': x1, 'y': x2}
 
+                # Add Identity Labels
+                if 'label' in d:
+                    loss_fn_kwargs['label'] = d['label'].to(device)
+
                 if model.has_classifier():
                     output_dict = model.cross_classify(x1, x2)
                     loss_fn_kwargs['pred'] = output_dict['logits']
