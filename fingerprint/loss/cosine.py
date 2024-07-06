@@ -1,3 +1,4 @@
+import math
 import torch
 import torch.nn as nn
 
@@ -15,6 +16,7 @@ class CrossCosineEmbeddingLoss(nn.Module):
         self.reduction = reduction
         self.loss_fn = nn.CosineEmbeddingLoss(margin=margin, reduction='none')
         self._pre_computed_weights = {}
+        self.dynamic_divisor = None
 
     def forward(self, x, y, **kwargs):
         n = len(x)
@@ -41,6 +43,14 @@ class CrossCosineEmbeddingLoss(nn.Module):
             loss = torch.sum(losses)
         elif self.reduction == 'mean':
             loss = torch.sum(losses) / losses.numel()
+        elif self.reduction == 'dynamic':
+            if self.dynamic_divisor is None:
+                loss_sum = torch.sum(losses)
+                loss_divisor = 10 ** (math.floor(math.log10(loss_sum.item())))
+                self.dynamic_divisor = loss_divisor
+                print(f'{self.__class__.__name__}: Initial batch loss {loss_sum}. '
+                      f'Setting dynamic divisor to: {loss_divisor}')
+            loss = torch.sum(losses) / self.dynamic_divisor
         else:
             raise ValueError(f'Invalid reduction: {self.reduction}')
         result = {

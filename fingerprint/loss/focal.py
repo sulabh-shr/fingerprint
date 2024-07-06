@@ -1,3 +1,4 @@
+import math
 import torch
 import torch.nn as nn
 from torchvision.ops import sigmoid_focal_loss
@@ -14,6 +15,7 @@ class FocalLoss(nn.Module):
         self.gamma = gamma
         self.reduction = reduction
         self.loss_fn = sigmoid_focal_loss
+        self.dynamic_divisor = None
 
     def forward(self, **kwargs):
         """
@@ -32,7 +34,21 @@ class FocalLoss(nn.Module):
 
         if gt.device != pred.device:
             gt = gt.to(pred.device)
-        loss = self.loss_fn(pred, gt, alpha=self.alpha, gamma=self.gamma, reduction=self.reduction)
+
+        if self.reduction in ('none', 'sum', 'mean'):
+            loss = self.loss_fn(pred, gt, alpha=self.alpha, gamma=self.gamma, reduction=self.reduction)
+        elif self.reduction == 'dynamic':
+            losses = self.loss_fn(pred, gt, alpha=self.alpha, gamma=self.gamma, reduction='none')
+            if self.dynamic_divisor is None:
+                loss_sum = torch.sum(losses)
+                loss_divisor = 10 ** (math.floor(math.log10(loss_sum.item())))
+                self.dynamic_divisor = loss_divisor
+                print(f'{self.__class__.__name__}: Initial batch loss {loss_sum}. '
+                      f'Setting dynamic divisor to: {loss_divisor}')
+            loss = torch.sum(losses) / self.dynamic_divisor
+        else:
+            raise ValueError(f'Invalid reduction: {self.reduction}')
+
         result = {
             'loss': loss
         }
