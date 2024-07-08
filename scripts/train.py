@@ -220,8 +220,8 @@ def main(args):
     # Checkpoints and summaries
     writer = SummaryWriter(out_root) if rank == 0 else DummyClass()
     ckpt_path = os.path.join(out_root, 'checkpoint.pth')
-    best_score_path = os.path.join(out_root, 'checkpoint-best-loss.pth')
-    best_loss_path = os.path.join(out_root, 'checkpoint-best-score.pth')
+    best_score_path = os.path.join(out_root, 'checkpoint-best-score.pth')
+    best_loss_path = os.path.join(out_root, 'checkpoint-best-loss.pth')
     print(f'{sep_line}Checkpoints will be saved at : {ckpt_path}')
     if rank == 0 and (resume_path is None or ft):
         cfg_path = os.path.join(out_root, 'config.yaml')
