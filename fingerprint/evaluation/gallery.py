@@ -161,7 +161,7 @@ class FingerprintEvaluator(BaseEvaluator):
     def summarize(res):
         out = ""
         for k, v in res.items():
-            out += f'{k[:25]:-<25s} : {v:.3f}\n'
+            out += f'{k[:25]:-<25s} : {v:.2f}\n'
         return out
 
     def set_model(self, model):

@@ -4,12 +4,42 @@ from sklearn import metrics
 import matplotlib.pyplot as plt
 
 
+def hter_from_fmr_fnmr(fmr: np.ndarray, fnmr: np.ndarray, thresholds=None):
+    output = {}
+    for fmr_score, decimals in zip([0.01, 0.001], [2, 3]):
+        fmr_round = fmr
+        fnmr_round = fnmr
+        mask = fmr_round <= fmr_score
+        fmr_possible = fmr_round[mask]
+        fnmr_possible = fnmr_round[mask]
+        hter_possible = (fmr_possible + fnmr_possible) / 2
+        if len(hter_possible) > 0:
+            min_idx = np.argmin(hter_possible)
+        else:
+            print(f'FMR: {fmr_round}')
+            print(f'FNMR: {fnmr_round}')
+            raise IndexError
+        hter = hter_possible[min_idx]
+        if thresholds is not None:
+            fmr_thresh = thresholds[mask][min_idx]
+            output[f'FMR<={fmr_score} Threshold'] = fmr_thresh
+        output[f'HTER_FMR<={fmr_score}'] = round(hter * 100, 2)
+        output[f'FMR<={fmr_score}'] = round(fmr_possible[min_idx] * 100, 2)
+        output[f'FNMR<={fmr_score}'] = round(fnmr_possible[min_idx] * 100, 2)
+
+    return output
+
+
 def scores_to_metrics(y_true: List, y_score: List):
     y_true = np.array(y_true)
     y_score = np.array(y_score)
 
     fpr, tpr, thresholds = metrics.roc_curve(y_true, y_score)
-    fnr = 1 - tpr
+    FAR = FMR = fpr
+    FRR = FNMR = fnr = 1 - tpr
+
+    hter_dict = hter_from_fmr_fnmr(FMR, FNMR, thresholds)
+
     delta = np.absolute(fpr - fnr)
 
     eer_index = np.nanargmin(delta)
@@ -74,4 +104,6 @@ def scores_to_metrics(y_true: List, y_score: List):
         'PP': PP,
         'PN': PN,
     }
+    result.update(hter_dict)
+
     return result, fig
