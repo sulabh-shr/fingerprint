@@ -124,13 +124,16 @@ def main(args):
     sep = '#' * 70
     final_scores = []
 
-    # Dataset
+    # Dataset Transform
     test_transforms = get_test_transforms(cfg.INPUT)
 
     for ckpt_path in ckpt_paths:
         resume(path=ckpt_path, rank=rank, ft=True, model=model)
         ckpt_folder_path = os.path.split(ckpt_path)[0]
         ckpt_out_root = os.path.join(ckpt_folder_path, 'multi-eval')
+
+        # Load checkpoint specific config for respective train/val/test
+        ckpt_cfg = load_cfg(os.path.join(ckpt_folder_path, 'config.yaml'))
 
         for seed in seeds:
             torch.manual_seed(seed)
@@ -139,17 +142,17 @@ def main(args):
             np.random.seed(seed)
 
             for frames in frames_per_video:
-                cfg.DATA.TEST.DATASET.KWARGS.frames_per_video = frames
+                ckpt_cfg.DATA.TEST.DATASET.KWARGS.frames_per_video = frames
 
                 for probe_mov in PROBE_MOVES:
-                    cfg.DATA.TEST.DATASET.KWARGS.probe_movements = probe_mov
+                    ckpt_cfg.DATA.TEST.DATASET.KWARGS.probe_movements = probe_mov
 
-                    dataset = build_dataset(cfg.DATA.TEST)
+                    dataset = build_dataset(ckpt_cfg.DATA.TEST)
                     dataset.transforms1 = test_transforms['test']
                     dataset.transforms2 = test_transforms['test']
-                    dataloader = build_dataloader(cfg.DATA.TEST, dataset=dataset)
+                    dataloader = build_dataloader(ckpt_cfg.DATA.TEST, dataset=dataset)
 
-                    evaluator = build_evaluator(cfg.EVALUATOR.TEST)
+                    evaluator = build_evaluator(ckpt_cfg.EVALUATOR.TEST)
                     evaluator.set_model(model)
 
                     # Timers
