@@ -3,9 +3,11 @@ import sys
 import yaml
 import math
 import torch
+import random
 import inspect
 import argparse
 import warnings
+import numpy as np
 from easydict import EasyDict
 import matplotlib.pyplot as plt
 
@@ -47,6 +49,7 @@ def get_args():
     parser.add_argument('--skip-ddp', action='store_true', help='skip ddp', default=False)
     parser.add_argument('--debug', action='store_true', help='debug', default=False)
     parser.add_argument('--opts', type=str, nargs='*', help='cfg updates', default=None)
+    parser.add_argument('--seed', type=int, help='seed', default=None)
     args = parser.parse_args()
     return args
 
@@ -132,11 +135,19 @@ def main(args):
     compile_ = args.compile
     use_ddp = not args.skip_ddp
     opts = args.opts
+    seed = args.seed
 
     # Load and merge configs
     cfg_org = load_cfg(args.cfg, opts)
 
     sep_line = '*' * 70 + '\n'
+
+    if seed is not None:
+        print(f'Setting SEED to {seed}')
+        torch.manual_seed(seed)
+        torch.cuda.manual_seed(seed)
+        random.seed(seed)
+        np.random.seed(seed)
 
     # Distributed
     rank = 0
