@@ -29,6 +29,7 @@ class MMFVBase(Dataset, abc.ABC):
             fingers: List[str],
             gallery_movements: List[str],
             probe_movements: List[str],
+            every_nth_frame: int,
             frames_per_video: Union[None, int],
             transforms1: Union[None, Callable],
             transforms2: Union[None, Callable],
@@ -45,6 +46,7 @@ class MMFVBase(Dataset, abc.ABC):
             fingers:
             gallery_movements:
             probe_movements:
+            every_nth_frame: sample every nth frame before other sampling
             frames_per_video:
             transforms1:
             transforms2:
@@ -67,6 +69,7 @@ class MMFVBase(Dataset, abc.ABC):
         self.fingers = fingers
         self.gallery_movements = gallery_movements
         self.probe_movements = probe_movements
+        self.every_nth_frame = every_nth_frame
         self.frames_per_video = frames_per_video
         self.transforms1 = transforms1
         self.transforms2 = transforms2
@@ -105,8 +108,8 @@ class MMFVBase(Dataset, abc.ABC):
                         mov_path = os.path.join(finger_path, mov)
                         frames1 = natsorted([i for i in os.listdir(mov_path) if i.startswith('1_')])
                         frames2 = natsorted([i for i in os.listdir(mov_path) if i.startswith('2_')])
-                        frames1 = self.sample_video_frame(frames1)
-                        frames2 = self.sample_video_frame(frames2)
+                        frames1 = self.sample_video_frame(frames1)[::self.every_nth_frame]
+                        frames2 = self.sample_video_frame(frames2)[::self.every_nth_frame]
                         all_frames = frames1 + frames2
                         paths = [os.path.join(mov_path, i) for i in all_frames]
                         key = f'{subject}-{finger}'
@@ -128,6 +131,7 @@ class MMFVBase(Dataset, abc.ABC):
         """Sample k frames per video"""
 
         # randomize even if no sampling of frames
+
         k = self.frames_per_video
         if k is None:
             k = len(frames)
@@ -191,6 +195,7 @@ class MMFVContrastive(MMFVBase):
                  fingers=('f1', 'f2', 'f3', 'f4'),
                  gallery_movements=('Roll', 'Pitch', 'Yaw'),
                  probe_movements=('Roll', 'Pitch', 'Yaw'),
+                 every_nth_frame=1,
                  frames_per_video=None,
                  transforms1=None,
                  transforms2=None,
@@ -205,6 +210,7 @@ class MMFVContrastive(MMFVBase):
             fingers,
             gallery_movements,
             probe_movements,
+            every_nth_frame,
             frames_per_video,
             transforms1,
             transforms2,
@@ -259,6 +265,7 @@ class MMFVPair(MMFVBase):
                  fingers=('f1', 'f2', 'f3', 'f4'),
                  gallery_movements=('Roll', 'Pitch', 'Yaw'),
                  probe_movements=('Roll', 'Pitch', 'Yaw'),
+                 every_nth_frame=1,
                  frames_per_video=1,
                  transforms1=None,
                  transforms2=None,
@@ -274,6 +281,7 @@ class MMFVPair(MMFVBase):
             fingers,
             gallery_movements,
             probe_movements,
+            every_nth_frame,
             frames_per_video,
             transforms1,
             transforms2,
@@ -322,6 +330,7 @@ class MMFVSingle(MMFVBase):
                  fingers=('f1', 'f2', 'f3', 'f4'),
                  gallery_movements=('Roll', 'Pitch', 'Yaw'),
                  probe_movements=('Roll', 'Pitch', 'Yaw'),
+                 every_nth_frame=1,
                  frames_per_video=1,
                  transforms1=None,
                  transforms2=None,
@@ -337,6 +346,7 @@ class MMFVSingle(MMFVBase):
             fingers,
             gallery_movements,
             probe_movements,
+            every_nth_frame,
             frames_per_video,
             transforms1,
             transforms2,
@@ -402,6 +412,7 @@ class MMFVContrastiveClass(MMFVBase):
                  fingers=('f1', 'f2', 'f3', 'f4'),
                  gallery_movements=('Roll', 'Pitch', 'Yaw'),
                  probe_movements=('Roll', 'Pitch', 'Yaw'),
+                 every_nth_frame=1,
                  frames_per_video=None,
                  transforms1=None,
                  transforms2=None,
@@ -416,6 +427,7 @@ class MMFVContrastiveClass(MMFVBase):
             fingers,
             gallery_movements,
             probe_movements,
+            every_nth_frame,
             frames_per_video,
             transforms1,
             transforms2,
