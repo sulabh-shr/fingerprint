@@ -1,0 +1,121 @@
+DATA:
+  ROOT: &root /projects/kosecka/sulabh/datasets/MMFV-10th_binary
+  TEST:
+    DATALOADER:
+      KWARGS:
+        batch_size: 8
+        num_workers: 4
+        shuffle: false
+    DATASET:
+      KWARGS:
+        crop: false
+        fingers: &fingers
+        - f1
+        - f2
+        - f3
+        - f4
+        every_nth_frame: 1
+        frames_per_video: 2
+        gallery_movements: &movements
+        - Roll
+        - Pitch
+        - Yaw
+        hist: &hist false
+        mode: test
+        probe_movements:
+        - Pitch
+        randomize: true
+        root: *root
+        segment: &segment false
+        subjects: test-50-50-seed1.txt
+      NAME: MMFVSingle
+  TRAIN:
+    DATALOADER:
+      KWARGS:
+        batch_size: 256
+        num_workers: 4
+        shuffle: true
+    DATASET:
+      KWARGS:
+        crop: false
+        fingers: *fingers
+        every_nth_frame: 1
+        frames_per_video: null
+        gallery_movements: *movements
+        hist: *hist
+        mode: train
+        probe_movements:
+        - Pitch
+        - Roll
+        - Yaw
+        randomize: true
+        root: *root
+        segment: *segment
+        subjects: train-50-50-seed1.txt
+      NAME: MMFVContrastiveClass
+  VAL:
+    DATALOADER:
+      KWARGS:
+        batch_size: 8
+        num_workers: 2
+        shuffle: false
+    DATASET:
+      KWARGS:
+        crop: false
+        fingers: *fingers
+        every_nth_frame: 1
+        frames_per_video: 2
+        gallery_movements: *movements
+        hist: *hist
+        mode: val
+        probe_movements:
+        - Roll
+        randomize: false
+        root: *root
+        segment: *segment
+        subjects: test-50-50-seed1.txt
+      NAME: MMFVContrastive
+EVALUATOR:
+  TEST:
+    KWARGS:
+      fusion: "feat-avg"
+      verbose: true
+    NAME: FingerprintEvaluator
+  VAL:
+    KWARGS:
+      fusion: "feat-avg"
+      verbose: false
+    NAME: FingerprintEvaluator
+INPUT:
+  IMAGE:
+    BINARY: true
+    IMG_SIZE:
+    - 224
+    - 224
+    MEAN:
+    - 0.5
+    STD:
+    - 1.0
+MODEL:
+  BACKBONE:
+    KWARGS:
+      in_chans: 1
+      num_classes: 512
+      pretrained: true
+    NAME: mobilenetv3_large_100.ra_in1k
+  CLASSIFIER:
+    KWARGS:
+      channels:
+      - 1024
+      - 128
+      - 1
+    NAME: BinaryClassifier
+  EXPANDER:
+    KWARGS:
+      in_channels: 512
+      out_channels: 8192
+    NAME: Expander
+  HEAD:
+    NAME: Identity
+  META_ARCH:
+    NAME: Contrastive

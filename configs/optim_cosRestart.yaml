@@ -1,0 +1,27 @@
+OPTIM:
+  OPTIMIZER:
+    NAME: "LARS"
+    KWARGS:
+      lr: 0.001
+      weight_decay: 0.0001
+  LR_SCHEDULERS:
+    SCHEDULERS:
+      - NAME: "LinearLR"
+        KWARGS:
+          start_factor: 0.1
+          total_iters: &iters1 500
+      - NAME: "CosineAnnealingWarmRestarts"
+        KWARGS:
+          T_0: 500
+          T_mult: 2
+      - NAME: "PolynomialLR"
+        KWARGS:
+          total_iters: 3000
+    MILESTONES:
+      - *iters1
+      - 16500
+PARAMS:
+  ITERS: 20000
+  SAVE_EVERY: 200
+  PRINT_EVERY: 10
+  EVAL_EVERY: 200

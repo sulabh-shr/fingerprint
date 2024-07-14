@@ -1,0 +1,165 @@
+DATA:
+  ROOT: &root /projects/kosecka/sulabh/datasets/MMFV-10th_cropped
+  TEST:
+    DATALOADER:
+      KWARGS:
+        batch_size: 8
+        num_workers: 4
+        shuffle: false
+    DATASET:
+      KWARGS:
+        crop: false
+        fingers: &fingers
+        - f1
+        - f2
+        - f3
+        - f4
+        frames_per_video: 2
+        gallery_movements: &movements
+        - Roll
+        - Pitch
+        - Yaw
+        hist: false
+        mode: test
+        probe_movements:
+        - Pitch
+        randomize: true
+        root: *root
+        segment: false
+        subjects: test-70-30-seed1.txt
+      NAME: MMFVSingle
+  TRAIN:
+    DATALOADER:
+      KWARGS:
+        batch_size: 256
+        num_workers: 4
+        shuffle: true
+    DATASET:
+      KWARGS:
+        crop: false
+        fingers: *fingers
+        frames_per_video: null
+        gallery_movements: *movements
+        hist: false
+        mode: train
+        probe_movements:
+        - Pitch
+        - Roll
+        - Yaw
+        randomize: true
+        root: *root
+        segment: false
+        subjects: train-70-30-seed1.txt
+      NAME: MMFVContrastiveClass
+  VAL:
+    DATALOADER:
+      KWARGS:
+        batch_size: 8
+        num_workers: 2
+        shuffle: false
+    DATASET:
+      KWARGS:
+        crop: false
+        fingers: *fingers
+        frames_per_video: 2
+        gallery_movements: *movements
+        hist: false
+        mode: val
+        probe_movements:
+        - Roll
+        randomize: false
+        root: *root
+        segment: false
+        subjects: test-70-30-seed1.txt
+      NAME: MMFVContrastive
+EVALUATOR:
+  TEST:
+    KWARGS:
+      fusion: feat-avg
+      verbose: true
+    NAME: FingerprintEvaluator
+  VAL:
+    KWARGS:
+      fusion: feat-avg
+      verbose: false
+    NAME: FingerprintEvaluator
+INPUT:
+  IMAGE:
+    BINARY: false
+    IMG_SIZE:
+    - 224
+    - 224
+    MEAN:
+    - 0.485
+    - 0.456
+    - 0.406
+    STD:
+    - 0.229
+    - 0.224
+    - 0.225
+LOSSES:
+- KWARGS:
+    cov_coeff: 0.01
+    sim_coeff: 1.0
+    std_coeff: 1.0
+  NAME: VICRegLoss
+  WEIGHT: 1.0
+- KWARGS:
+    margin: 0.0
+    neg_wt: 0.50
+    pos_wt: 1.50
+    reduction: dynamic
+  NAME: CrossCosineEmbeddingLoss
+  WEIGHT: 1.0
+- KWARGS:
+    alpha: 0.25
+    gamma: 2
+    reduction: dynamic
+  NAME: FocalLoss
+  WEIGHT: 1.0
+MODEL:
+  BACKBONE:
+    KWARGS:
+      in_chans: 3
+      num_classes: 512
+      pretrained: true
+    NAME: mobilenetv3_large_100.ra_in1k
+  CLASSIFIER:
+    KWARGS:
+      channels:
+      - 1024
+      - 128
+      - 1
+    NAME: BinaryClassifier
+  EXPANDER:
+    KWARGS:
+      in_channels: 512
+      out_channels: 8192
+    NAME: Expander
+  HEAD:
+    NAME: Identity
+  META_ARCH:
+    NAME: Contrastive
+OPTIM:
+  LR_SCHEDULERS:
+    MILESTONES:
+    - 50
+    SCHEDULERS:
+    - KWARGS:
+        start_factor: 0.1
+        total_iters: 50
+      NAME: LinearLR
+    - KWARGS:
+        power: 0.9
+        total_iters: 1950
+      NAME: PolynomialLR
+  OPTIMIZER:
+    KWARGS:
+      lr: 0.2
+      weight_decay: 0.0001
+    NAME: LARS
+PARAMS:
+  EVAL_EVERY: 200
+  ITERS: 2000
+  PRINT_EVERY: 10
+  SAVE_EVERY: 200

@@ -4,7 +4,7 @@ MODEL:
       in_chans: 3
       num_classes: 512
       pretrained: true
-    NAME: mobilenetv3_large_100.ra_in1k
+    NAME: resnet18.a1_in1k
   CLASSIFIER:
     KWARGS:
       channels:

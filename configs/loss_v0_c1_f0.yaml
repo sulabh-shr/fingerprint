@@ -1,0 +1,8 @@
+LOSSES:
+- KWARGS:
+    margin: 0.0
+    neg_wt: 0.50
+    pos_wt: 1.50
+    reduction: dynamic
+  NAME: CrossCosineEmbeddingLoss
+  WEIGHT: 1.0

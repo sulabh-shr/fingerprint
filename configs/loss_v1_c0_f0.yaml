@@ -1,0 +1,7 @@
+LOSSES:
+- KWARGS:
+    cov_coeff: 0.01
+    sim_coeff: 1.0
+    std_coeff: 1.0
+  NAME: VICRegLoss
+  WEIGHT: 1.0

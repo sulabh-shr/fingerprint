@@ -1,0 +1,14 @@
+LOSSES:
+- KWARGS:
+    margin: 0.0
+    neg_wt: 0.50
+    pos_wt: 1.50
+    reduction: dynamic
+  NAME: CrossCosineEmbeddingLoss
+  WEIGHT: 1.0
+- KWARGS:
+    alpha: 0.25
+    gamma: 2
+    reduction: dynamic
+  NAME: FocalLoss
+  WEIGHT: 1.0
