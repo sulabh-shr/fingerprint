@@ -69,7 +69,15 @@ class MMFVBase(Dataset, abc.ABC):
         self.fingers = fingers
         self.gallery_movements = gallery_movements
         self.probe_movements = probe_movements
+        if every_nth_frame is None or every_nth_frame in ("null", "none"):
+            every_nth_frame = 1
+        else:
+            every_nth_frame = int(every_nth_frame)
         self.every_nth_frame = every_nth_frame
+        if frames_per_video is None or frames_per_video in ("null", "none"):
+            frames_per_video = frames_per_video
+        else:
+            frames_per_video = int(frames_per_video)
         self.frames_per_video = frames_per_video
         self.transforms1 = transforms1
         self.transforms2 = transforms2
@@ -174,7 +182,8 @@ class MMFVBase(Dataset, abc.ABC):
         result = (f'{self.__class__.__name__}\n Root: {self.root}\n Length: {len(self)}\n '
                   f'Crop: {self.crop}\n Segment: {self.segment}\n Randomize: {self.randomize}\n '
                   f'Fingers: {self.fingers}\n Gallery Movements: {self.gallery_movements}\n '
-                  f'Probe Movements: {self.probe_movements}\n Frames per Video: {self.frames_per_video}')
+                  f'Probe Movements: {self.probe_movements}\n Every nth frame:{self.every_nth_frame}\n '
+                  'Frames per Video: {self.frames_per_video}')
         return result
 
 
@@ -476,13 +485,6 @@ class MMFVContrastiveClass(MMFVBase):
             'mov2': data2_mov,
             'label': label
         }
-        return result
-
-    def __str__(self):
-        result = (f'{self.__class__.__name__}\n Root: {self.root}\n Length: {len(self)}\n '
-                  f'Crop: {self.crop}\n Segment: {self.segment}\n Randomize: {self.randomize}\n '
-                  f'Fingers: {self.fingers}\n Gallery Movements: {self.gallery_movements}\n '
-                  f'Probe Movements: {self.probe_movements}\n Frames per Video: {self.frames_per_video}')
         return result
 
 
