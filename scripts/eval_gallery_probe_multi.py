@@ -42,7 +42,7 @@ def get_cast_type(x):
 def get_args():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--cfg', type=str, nargs='+', help='folder containing images', required=True)
-    parser.add_argument('--ckpts', type=str, nargs='*', help='checkpoint file(s) for resuming', default=[])
+    parser.add_argument('--ckpts', type=str, nargs='*', help='checkpoint file(s) for resuming', default=[None])
     parser.add_argument('--out', type=str, help='output folder for final scores', required=True)
     parser.add_argument('--compile', action='store_true', help='torch.compile flag', default=False)
     parser.add_argument('--ddp', action='store_true', help='use ddp', default=False)
@@ -128,21 +128,31 @@ def main(args):
     test_transforms = get_test_transforms(cfg.INPUT)
 
     for ckpt_path in ckpt_paths:
-        resume(path=ckpt_path, rank=rank, ft=True, model=model)
-        ckpt_folder_path = os.path.split(ckpt_path)[0]
-        ckpt_out_root = os.path.join(ckpt_folder_path, 'multi-eval')
+        
+        # Load weights and checkpoint specific configs
+        if ckpt_path is not None:
+            resume(path=ckpt_path, rank=rank, ft=True, model=model)
 
-        # Load checkpoint specific config for respective train/val/test
-        ckpt_cfg = load_cfg(os.path.join(ckpt_folder_path, 'config.yaml'))
+            ckpt_folder_path, ckpt_name = os.path.split(ckpt_path)
+            ckpt_name, _ = os.path.splitext(ckpt_name)
+            ckpt_out_root = os.path.join(ckpt_folder_path, f'multi-eval-{ckpt_name}')
 
-        for seed in seeds:
-            torch.manual_seed(seed)
-            torch.cuda.manual_seed(seed)
-            random.seed(seed)
-            np.random.seed(seed)
+            # Load checkpoint specific config for respective train/val/test
+            ckpt_path_i = os.path.join(ckpt_folder_path, 'config.yaml')
+            ckpt_cfg = load_cfg([ckpt_path_i], opts)
+            ckpt_cfg = EasyDict(ckpt_cfg)
+            print(f'{sep}\nUSING CONFIG: {ckpt_path_i}\n{sep}')
+        else:
+            ckpt_cfg = cfg
 
-            for frames in frames_per_video:
-                ckpt_cfg.DATA.TEST.DATASET.KWARGS.frames_per_video = frames
+        for frames in frames_per_video:
+            ckpt_cfg.DATA.TEST.DATASET.KWARGS.frames_per_video = frames
+            
+            for seed in seeds:
+                torch.manual_seed(seed)
+                torch.cuda.manual_seed(seed)
+                random.seed(seed)
+                np.random.seed(seed)
 
                 for probe_mov in PROBE_MOVES:
                     ckpt_cfg.DATA.TEST.DATASET.KWARGS.probe_movements = probe_mov
@@ -194,9 +204,9 @@ def main(args):
                     # Save scores and plots
                     os.makedirs(ckpt_out_root, exist_ok=True)
                     if isinstance(probe_mov, str):
-                        run_name = f'seed {seed} {probe_mov}'
+                        run_name = f'frames {frames} seed {seed} {probe_mov}'
                     else:
-                        run_name = f'seed {seed}'
+                        run_name = f'frames {frames} seed {seed}'
                         for i in probe_mov:
                             run_name += ' ' + i
                     eval_text_path = os.path.join(ckpt_out_root, f'eval {run_name}.txt')
@@ -207,7 +217,7 @@ def main(args):
 
                     print(f'Eval Outputs saved at: {eval_text_path}')
 
-    final_run_name = 'SEEDS'
+    final_run_name = f'{ckpt_name} Eval SEEDS'
     for i in seeds:
         final_run_name += f' {i}'
     final_text_path = os.path.join(out_root, f'{final_run_name}.txt')
