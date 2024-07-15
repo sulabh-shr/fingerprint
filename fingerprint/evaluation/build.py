@@ -1,5 +1,8 @@
 from .base import BaseEvaluator
-from .gallery import FingerprintEvaluator, FingerprintEvaluatorWithLogits
+from .gallery import (
+    FingerprintEvaluator,
+    FingerprintEvaluatorMultiScores
+)
 from .contrastive import ContrastiveEvaluator, ContrastiveEvaluatorMulti
 
 

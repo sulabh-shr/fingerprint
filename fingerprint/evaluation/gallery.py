@@ -11,7 +11,7 @@ from sklearn.decomposition import PCA
 from .base import BaseEvaluator
 from .utils import scores_to_metrics
 
-__all__ = ['FingerprintEvaluator', 'FingerprintEvaluatorWithLogits']
+__all__ = ['FingerprintEvaluator', 'FingerprintEvaluatorMultiScores']
 
 
 class FingerprintEvaluator(BaseEvaluator):
@@ -168,7 +168,7 @@ class FingerprintEvaluator(BaseEvaluator):
         warnings.warn(f'Features will not be re-used by model')
 
 
-class FingerprintEvaluatorWithLogits(FingerprintEvaluator):
+class FingerprintEvaluatorMultiScores(FingerprintEvaluator):
     def __init__(
             self,
             dim=-1,
@@ -178,7 +178,10 @@ class FingerprintEvaluatorWithLogits(FingerprintEvaluator):
             device='cpu',
             model: nn.Module = None,
             verbose=True,
-            model_device='cuda'
+            model_device='cuda',
+            focal=1.0,
+            cosine=1.0,
+            vic=1.0
     ):
         super().__init__(
             dim,
@@ -190,15 +193,36 @@ class FingerprintEvaluatorWithLogits(FingerprintEvaluator):
             verbose
         )
         self.model_device = model_device
-
-    def score(self, x1: torch.Tensor, x2: torch.Tensor):
-        with torch.no_grad():
-            x1 = x1.to(self.model_device)
-            x2 = x2.to(self.model_device)
-            result = F.sigmoid(self.model.classify(x1, x2)['logits'])
-        return result.item()
+        self.focal = focal
+        self.cosine = cosine
+        self.vic = vic
 
     def set_model(self, model):
         model.eval()
         model.to(self.model_device)
         self.model = model
+
+    def score(self, x1: torch.Tensor, x2: torch.Tensor):
+        with torch.no_grad():
+            x1 = x1.to(self.model_device)
+            x2 = x2.to(self.model_device)
+
+            sim_logits = 0
+            if self.focal > 0:
+                sim_logits = F.sigmoid(self.model.classify(x1, x2)['logits'])
+
+            sim_cosine = 0
+            if self.cosine > 0:
+                sim_cosine = (1 + self.similarity_fn(x1, x2)) / 2
+
+            sim_vic = 0
+            if self.vic > 0:
+                x = torch.stack([x1, x2])
+                x = x - x.mean(dim=0)
+                std_x = torch.sqrt(x.var(dim=0) + 0.0001)
+                sim_vic = 1 - (torch.mean(std_x))
+
+            result = (self.focal * sim_logits + self.cosine * sim_cosine + self.vic * sim_vic)
+            result = result / (self.focal + self.cosine + self.vic)
+
+        return result.item()

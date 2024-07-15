@@ -1,3 +1,3 @@
 from .contrastive import ContrastiveEvaluator, ContrastiveEvaluatorMulti
-from .gallery import FingerprintEvaluator, FingerprintEvaluatorWithLogits
+from .gallery import FingerprintEvaluator, FingerprintEvaluatorMultiScores
 from .build import build_evaluator
