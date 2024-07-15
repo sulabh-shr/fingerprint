@@ -144,6 +144,9 @@ def main(args):
             print(f'{sep}\nUSING CONFIG: {ckpt_path_i}\n{sep}')
         else:
             ckpt_cfg = cfg
+            ckpt_name = 'vanilla'
+            ckpt_out_root = out_root
+
 
         for frames in frames_per_video:
             ckpt_cfg.DATA.TEST.DATASET.KWARGS.frames_per_video = frames
@@ -220,6 +223,10 @@ def main(args):
     final_run_name = f'{ckpt_name} Eval SEEDS'
     for i in seeds:
         final_run_name += f' {i}'
+    final_run_name += ' FRAMES'
+    for frames in frames_per_video:
+        final_run_name += f' {frames}'
+        
     final_text_path = os.path.join(out_root, f'{final_run_name}.txt')
     final_csv_path = os.path.join(out_root, f'{final_run_name}.csv')
     final_pickle_path = os.path.join(out_root, f'{final_run_name}.pickle')
